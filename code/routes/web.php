@@ -341,6 +341,20 @@ use Illuminate\Support\Facades\Http;
 
              Route::get('/{uid}/analytics', 'analytics')->name('analytics');
              Route::get('/{uid}/embed', 'embedCode')->name('embed');
+
+             # API key management for specific chatbot
+             Route::get('/{uid}/api-keys', 'apiKeys')->name('api-keys');
+             Route::post('/{uid}/api-keys/store', 'storeApiKey')->name('api-keys.store');
+             Route::get('/{uid}/api-keys/{keyId}/destroy', 'destroyApiKey')->name('api-keys.destroy');
+             Route::post('/{uid}/api-keys/{keyId}/set-default', 'setDefaultApiKey')->name('api-keys.set-default');
+         });
+
+         # User-level API key management (global keys)
+         Route::controller(ChatbotController::class)->name('api-keys.')->prefix('api-keys/')->group(function () {
+             Route::get('/', 'apiKeys')->name('index');
+             Route::post('/store', 'storeApiKey')->name('store');
+             Route::get('/{keyId}/destroy', 'destroyApiKey')->name('destroy');
+             Route::post('/{keyId}/set-default', 'setDefaultApiKey')->name('set-default');
          });
 
          #live agent routes

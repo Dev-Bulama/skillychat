@@ -7,6 +7,9 @@
             {{translate(Arr::get($meta_data,'title'))}}
         </h4>
         <div class="d-flex justify-content-end align-items-end gap-2">
+            <a href="{{route('user.api-keys.index')}}" class="i-btn success btn--md capsuled">
+                <i class="bi bi-key me-1"></i> {{translate('Manage API Keys')}}
+            </a>
             <a href="{{route('user.chatbot.create')}}" class="i-btn primary btn--md capsuled">
                 <i class="bi bi-plus-circle me-1"></i> {{translate('Create Chatbot')}}
             </a>
@@ -78,6 +81,10 @@
                                         <a data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{translate('Embed Code')}}"
                                             href="{{route('user.chatbot.embed', $chatbot->uid)}}" class="icon-btn secondary">
                                             <i class="bi bi-code-square"></i>
+                                        </a>
+                                        <a data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{translate('API Keys')}}"
+                                            href="{{route('user.chatbot.api-keys', $chatbot->uid)}}" class="icon-btn dark">
+                                            <i class="bi bi-key"></i>
                                         </a>
                                         <a data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{translate('Delete')}}"
                                             href="javascript:void(0);"
