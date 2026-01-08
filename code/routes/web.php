@@ -3,9 +3,11 @@
 use App\Http\Controllers\User\AiVideoController;
 use App\Http\Controllers\User\SocialPostController;
 use App\Http\Controllers\User\UserController;
+use App\Http\Controllers\User\ChatbotController;
 use App\Http\Controllers\CommunicationsController;
 use App\Http\Controllers\CoreController;
 use App\Http\Controllers\FrontendController;
+use App\Http\Controllers\LiveAgentController;
 use App\Http\Controllers\User\AiController;
 use App\Http\Controllers\User\AiImageController;
 use App\Http\Controllers\User\Auth\AuthorizationController;
@@ -318,6 +320,40 @@ use Illuminate\Support\Facades\Http;
 
             });
 
+         });
+
+         #chatbot management routes
+         Route::controller(ChatbotController::class)->name('chatbot.')->prefix('chatbot/')->group(function () {
+             Route::get('/list', 'index')->name('index');
+             Route::get('/create', 'create')->name('create');
+             Route::post('/store', 'store')->name('store');
+             Route::get('/edit/{uid}', 'edit')->name('edit');
+             Route::post('/update/{uid}', 'update')->name('update');
+             Route::get('/destroy/{uid}', 'destroy')->name('destroy');
+
+             Route::get('/{uid}/training', 'training')->name('training');
+             Route::post('/{uid}/training/store', 'storeTraining')->name('training.store');
+             Route::get('/{uid}/training/{id}/destroy', 'destroyTraining')->name('training.destroy');
+
+             Route::get('/{uid}/agents', 'agents')->name('agents');
+             Route::post('/{uid}/agents/store', 'storeAgent')->name('agents.store');
+             Route::get('/{uid}/agents/{id}/destroy', 'destroyAgent')->name('agents.destroy');
+
+             Route::get('/{uid}/analytics', 'analytics')->name('analytics');
+             Route::get('/{uid}/embed', 'embedCode')->name('embed');
+         });
+
+         #live agent routes
+         Route::controller(LiveAgentController::class)->name('live-agent.')->prefix('live-agent/')->group(function () {
+             Route::get('/dashboard', 'dashboard')->name('dashboard');
+             Route::get('/conversation/{uid}', 'getConversation')->name('conversation');
+             Route::post('/claim', 'claimConversation')->name('claim');
+             Route::post('/send-message', 'sendMessage')->name('send-message');
+             Route::post('/resolve', 'resolveConversation')->name('resolve');
+             Route::post('/resume-ai', 'resumeAI')->name('resume-ai');
+             Route::post('/set-status', 'setStatus')->name('set-status');
+             Route::post('/poll-messages', 'pollMessages')->name('poll-messages');
+             Route::get('/pending-count', 'getPendingCount')->name('pending-count');
          });
 
         });
