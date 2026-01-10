@@ -45,6 +45,11 @@ Route::prefix('chatbot')->name('api.chatbot.')->group(function () {
         ->middleware(['throttle:10,1'])
         ->name('upload-image');
 
+    // Upload voice message to chatbot
+    Route::post('/voice-message', [ChatController::class, 'uploadVoice'])
+        ->middleware(['throttle:10,1'])
+        ->name('voice-message');
+
     // Rate conversation
     Route::post('/rate', [ChatController::class, 'rateConversation'])
         ->middleware(['throttle:10,1'])

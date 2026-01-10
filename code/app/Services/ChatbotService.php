@@ -638,4 +638,104 @@ PROMPT;
             'auto_assign' => false,
         ]);
     }
+
+    public function processVoiceMessage(Chatbot $chatbot, ChatbotConversation $conversation, UploadedFile $audio): ChatbotMessage
+    {
+        DB::beginTransaction();
+
+        try {
+            // Store the audio file
+            $audioPath = $audio->store('chatbot_voice/' . $chatbot->id, 'public');
+            $fullPath = Storage::disk('public')->path($audioPath);
+
+            // Transcribe the audio using OpenAI Whisper
+            $transcription = $this->transcribeAudio($chatbot, $fullPath);
+
+            // Create visitor message with transcription
+            $visitorMessage = $conversation->addMessage([
+                'sender_type' => 'visitor',
+                'message' => $transcription,
+                'message_type' => 'voice',
+                'file_path' => $audioPath,
+                'file_type' => $audio->getClientMimeType(),
+                'file_size' => $audio->getSize(),
+            ]);
+
+            // If conversation is with human, don't process with AI
+            if ($conversation->status === 'human_active') {
+                DB::commit();
+                return $visitorMessage;
+            }
+
+            // Process the transcribed text as a normal message
+            $aiProvider = $this->aiManager->getProvider($chatbot);
+            $aiResponse = $aiProvider->chat($this->buildChatHistory($conversation, $transcription));
+
+            if (!$aiResponse['success']) {
+                throw new Exception($aiResponse['error'] ?? 'AI response error');
+            }
+
+            $aiMessage = $conversation->addMessage([
+                'sender_type' => 'ai',
+                'message' => $aiResponse['message'],
+                'message_type' => 'text',
+                'ai_provider' => $aiResponse['provider'],
+                'ai_tokens_used' => $aiResponse['tokens_used'],
+                'ai_cost' => $aiResponse['cost'],
+                'response_time' => $aiResponse['response_time'],
+            ]);
+
+            $this->logUsage($chatbot, $conversation, $aiResponse);
+
+            DB::commit();
+
+            return $visitorMessage; // Return visitor message with transcription
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('ChatbotService::processVoiceMessage error: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    protected function transcribeAudio(Chatbot $chatbot, string $audioPath): string
+    {
+        try {
+            // Get API key for transcription (OpenAI Whisper)
+            $apiKey = $this->aiManager->getApiKeyForProvider($chatbot, 'openai');
+
+            if (!$apiKey) {
+                throw new Exception('No OpenAI API key configured for voice transcription');
+            }
+
+            // Use OpenAI Whisper API to transcribe
+            $client = new \GuzzleHttp\Client();
+            $response = $client->post('https://api.openai.com/v1/audio/transcriptions', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $apiKey,
+                ],
+                'multipart' => [
+                    [
+                        'name' => 'file',
+                        'contents' => fopen($audioPath, 'r'),
+                        'filename' => basename($audioPath),
+                    ],
+                    [
+                        'name' => 'model',
+                        'contents' => 'whisper-1',
+                    ],
+                    [
+                        'name' => 'language',
+                        'contents' => $chatbot->language ?? 'en',
+                    ],
+                ],
+            ]);
+
+            $data = json_decode($response->getBody()->getContents(), true);
+            return $data['text'] ?? '';
+
+        } catch (Exception $e) {
+            Log::error('Voice transcription error: ' . $e->getMessage());
+            throw new Exception('Failed to transcribe audio: ' . $e->getMessage());
+        }
+    }
 }
