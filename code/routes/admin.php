@@ -634,6 +634,18 @@ Route::middleware([
 
         });
 
+        /** AI Chatbot System */
+        Route::controller(Admin\ChatbotController::class)->name('chatbot.')->prefix('chatbot/')->group(function () {
+            Route::any('/statistics', 'statistics')->name('statistics');
+            Route::any('/list', 'list')->name('list');
+            Route::get('/show/{uid}', 'show')->name('show');
+            Route::any('/conversations', 'conversations')->name('conversations');
+            Route::get('/conversation/{uid}', 'conversationDetails')->name('conversation.details');
+            Route::any('/analytics', 'analytics')->name('analytics');
+            Route::post('/update/status', 'updateStatus')->name('update.status');
+            Route::post('/bulk/action', 'bulk')->name('bulk');
+        });
+
         /** system update */
         Route::controller(SystemUpdateController::class)->name('system.')->prefix('system/')->group(function () {
             Route::any('/update/init', 'init')->name('update.init');
