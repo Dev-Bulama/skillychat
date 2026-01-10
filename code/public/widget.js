@@ -15,21 +15,32 @@
         }
 
         async init() {
+            console.log('[Chatbot Widget] Starting init()...');
             await this.loadConfig();
+            console.log('[Chatbot Widget] Config loaded:', this.config);
             this.createWidget();
+            console.log('[Chatbot Widget] Widget DOM created');
             this.attachEventListeners();
+            console.log('[Chatbot Widget] Event listeners attached');
             this.startPolling();
+            console.log('[Chatbot Widget] Polling started');
         }
 
         async loadConfig() {
             try {
-                const response = await fetch(`${this.apiUrl}/${this.chatbotId}/config`);
+                const configUrl = `${this.apiUrl}/${this.chatbotId}/config`;
+                console.log('[Chatbot Widget] Fetching config from:', configUrl);
+                const response = await fetch(configUrl);
+                console.log('[Chatbot Widget] Config response status:', response.status);
                 const data = await response.json();
+                console.log('[Chatbot Widget] Config data:', data);
                 if (data.success) {
                     this.config = data.config;
+                } else {
+                    console.error('[Chatbot Widget] Config fetch failed:', data);
                 }
             } catch (error) {
-                console.error('Failed to load chatbot config:', error);
+                console.error('[Chatbot Widget] Failed to load chatbot config:', error);
             }
         }
 
@@ -386,15 +397,28 @@
 
     // Auto-initialize from script tag
     function initializeWidget() {
+        console.log('[Chatbot Widget] Initializing...');
         const script = currentScript || document.querySelector('script[data-chatbot-id]');
+        console.log('[Chatbot Widget] Script element:', script);
+
         if (script) {
             const chatbotId = script.getAttribute('data-chatbot-id');
+            console.log('[Chatbot Widget] Chatbot ID:', chatbotId);
+
             if (chatbotId) {
+                const apiUrl = script.getAttribute('data-api-url') || '/api/chatbot';
+                console.log('[Chatbot Widget] API URL:', apiUrl);
+
                 new ChatbotWidget({
                     chatbotId: chatbotId,
-                    apiUrl: script.getAttribute('data-api-url') || '/api/chatbot'
+                    apiUrl: apiUrl
                 });
+                console.log('[Chatbot Widget] Widget instance created');
+            } else {
+                console.error('[Chatbot Widget] No chatbot-id attribute found');
             }
+        } else {
+            console.error('[Chatbot Widget] No script element found with data-chatbot-id attribute');
         }
     }
 
