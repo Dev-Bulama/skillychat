@@ -56,15 +56,9 @@
                             <div class="mb-3">
                                 <label class="form-label fw-bold">{{ translate('Status') }}</label>
                                 <p>
-                                    <span class="badge badge--{{ $chatbot->status == 1 ? 'success' : 'danger' }}">
-                                        {{ $chatbot->status == 1 ? translate('Active') : translate('Inactive') }}
+                                    <span class="badge badge--{{ $chatbot->status == 'active' ? 'success' : 'danger' }}">
+                                        {{ $chatbot->status == 'active' ? translate('Active') : translate('Inactive') }}
                                     </span>
-                                </p>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">{{ translate('Widget Type') }}</label>
-                                <p>
-                                    <span class="badge badge--dark">{{ ucfirst($chatbot->widget_type) }}</span>
                                 </p>
                             </div>
                             <div class="mb-3">
