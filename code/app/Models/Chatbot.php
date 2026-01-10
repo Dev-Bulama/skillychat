@@ -144,8 +144,9 @@ class Chatbot extends Model
 
     public function getEmbedCode(): string
     {
-        $url = url('/widget.js');
-        return "<script src=\"{$url}\" data-chatbot-id=\"{$this->uid}\" data-theme=\"light\"></script>";
+        $widgetUrl = url('/widget.js');
+        $apiUrl = url('/api/chatbot');
+        return "<script src=\"{$widgetUrl}\" data-chatbot-id=\"{$this->uid}\" data-api-url=\"{$apiUrl}\"></script>";
     }
 
     public function updateStats(array $stats): void
