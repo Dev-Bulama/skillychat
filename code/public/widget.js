@@ -381,9 +381,12 @@
         }
     }
 
+    // Capture script reference immediately (before DOMContentLoaded)
+    const currentScript = document.currentScript || document.querySelector('script[data-chatbot-id]');
+
     // Auto-initialize from script tag
-    window.addEventListener('DOMContentLoaded', function() {
-        const script = document.currentScript || document.querySelector('script[data-chatbot-id]');
+    function initializeWidget() {
+        const script = currentScript || document.querySelector('script[data-chatbot-id]');
         if (script) {
             const chatbotId = script.getAttribute('data-chatbot-id');
             if (chatbotId) {
@@ -393,7 +396,15 @@
                 });
             }
         }
-    });
+    }
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        window.addEventListener('DOMContentLoaded', initializeWidget);
+    } else {
+        // DOM already loaded
+        initializeWidget();
+    }
 
     // Export for manual initialization
     window.ChatbotWidget = ChatbotWidget;
