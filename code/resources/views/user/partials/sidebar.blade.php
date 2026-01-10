@@ -239,20 +239,6 @@
                                         <p>{{ translate('API Keys') }}</p>
                                     </a>
                                 </li>
-
-                                <li class="sub-menu-item">
-                                    <a class="sidebar-menu-link {{ request()->routeIs('user.live-agent.dashboard') ? 'active' : '' }}" href="{{ route('user.live-agent.dashboard') }}">
-                                        <span><i class="bi bi-headset"></i></span>
-                                        <p>{{ translate('Live Agent') }}</p>
-                                    </a>
-                                </li>
-
-                                <li class="sub-menu-item">
-                                    <a class="sidebar-menu-link {{ request()->routeIs('user.chatbot.analytics') ? 'active' : '' }}" href="{{ route('user.chatbot.analytics') }}">
-                                        <span><i class="bi bi-graph-up-arrow"></i></span>
-                                        <p>{{ translate('Analytics') }}</p>
-                                    </a>
-                                </li>
                             </ul>
                         </div>
                     </li>

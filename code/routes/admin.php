@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\Auth\NewPasswordController;
 use App\Http\Controllers\Admin\CannedContentController;
 use App\Http\Controllers\Admin\CannedVideoContentController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ChatbotController;
 use App\Http\Controllers\Admin\CommunicationsController;
 use App\Http\Controllers\Admin\FrontendManageController;
 use App\Http\Controllers\Admin\HomeController;
@@ -635,7 +636,7 @@ Route::middleware([
         });
 
         /** AI Chatbot System */
-        Route::controller(Admin\ChatbotController::class)->name('chatbot.')->prefix('chatbot/')->group(function () {
+        Route::controller(ChatbotController::class)->name('chatbot.')->prefix('chatbot/')->group(function () {
             Route::any('/statistics', 'statistics')->name('statistics');
             Route::any('/list', 'list')->name('list');
             Route::get('/show/{uid}', 'show')->name('show');
