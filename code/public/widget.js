@@ -11,6 +11,16 @@
             this.config = {};
             this.lastMessageId = null;
 
+            // Image preview state
+            this.selectedImage = null;
+
+            // Voice recording state
+            this.isRecording = false;
+            this.mediaRecorder = null;
+            this.audioChunks = [];
+            this.recordingStartTime = null;
+            this.recordingInterval = null;
+
             this.init();
         }
 
@@ -232,6 +242,147 @@
                         0%, 60%, 100% { transform: translateY(0); }
                         30% { transform: translateY(-10px); }
                     }
+                    .chatbot-emoji-picker {
+                        position: absolute;
+                        bottom: 70px;
+                        left: 15px;
+                        background: white;
+                        border-radius: 12px;
+                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                        padding: 15px;
+                        display: none;
+                        width: 300px;
+                        max-height: 350px;
+                        z-index: 10000;
+                    }
+                    .chatbot-emoji-picker.open {
+                        display: block;
+                    }
+                    .chatbot-emoji-picker-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 10px;
+                        padding-bottom: 10px;
+                        border-bottom: 1px solid #e1e8ed;
+                    }
+                    .chatbot-emoji-picker-title {
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #333;
+                    }
+                    .chatbot-emoji-picker-close {
+                        background: none;
+                        border: none;
+                        font-size: 20px;
+                        color: #90949c;
+                        cursor: pointer;
+                        padding: 0;
+                        line-height: 1;
+                    }
+                    .chatbot-emoji-grid {
+                        display: grid;
+                        grid-template-columns: repeat(8, 1fr);
+                        gap: 8px;
+                        max-height: 250px;
+                        overflow-y: auto;
+                    }
+                    .chatbot-emoji-item {
+                        background: none;
+                        border: none;
+                        font-size: 24px;
+                        cursor: pointer;
+                        padding: 5px;
+                        border-radius: 5px;
+                        transition: background 0.2s;
+                    }
+                    .chatbot-emoji-item:hover {
+                        background: #f5f5f5;
+                    }
+                    .chatbot-image-preview {
+                        position: relative;
+                        padding: 10px 15px;
+                        background: #f8f9fa;
+                        border-radius: 8px;
+                        margin: 10px 15px;
+                        display: none;
+                    }
+                    .chatbot-image-preview.show {
+                        display: block;
+                    }
+                    .chatbot-image-preview img {
+                        max-width: 100%;
+                        max-height: 200px;
+                        border-radius: 8px;
+                        display: block;
+                    }
+                    .chatbot-image-preview-info {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-top: 8px;
+                        font-size: 12px;
+                        color: #666;
+                    }
+                    .chatbot-image-preview-remove {
+                        background: #dc3545;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        padding: 4px 8px;
+                        font-size: 11px;
+                        cursor: pointer;
+                    }
+                    .chatbot-voice-recording {
+                        padding: 15px;
+                        background: #fff3cd;
+                        border-radius: 8px;
+                        margin: 10px 15px;
+                        display: none;
+                        align-items: center;
+                        gap: 10px;
+                    }
+                    .chatbot-voice-recording.active {
+                        display: flex;
+                    }
+                    .chatbot-voice-recording-dot {
+                        width: 12px;
+                        height: 12px;
+                        background: #dc3545;
+                        border-radius: 50%;
+                        animation: pulse 1.5s infinite;
+                    }
+                    @keyframes pulse {
+                        0%, 100% { opacity: 1; }
+                        50% { opacity: 0.5; }
+                    }
+                    .chatbot-voice-recording-time {
+                        flex: 1;
+                        font-size: 14px;
+                        color: #333;
+                    }
+                    .chatbot-voice-recording-controls {
+                        display: flex;
+                        gap: 5px;
+                    }
+                    .chatbot-voice-btn-stop {
+                        background: #dc3545;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        padding: 5px 10px;
+                        font-size: 12px;
+                        cursor: pointer;
+                    }
+                    .chatbot-voice-btn-cancel {
+                        background: #6c757d;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        padding: 5px 10px;
+                        font-size: 12px;
+                        cursor: pointer;
+                    }
                 </style>
             `;
 
@@ -254,7 +405,32 @@
                                 </div>
                             </div>
                         </div>
+                        <!-- Image Preview -->
+                        <div class="chatbot-image-preview" id="chatbot-image-preview">
+                            <img id="chatbot-preview-img" src="" alt="Preview">
+                            <div class="chatbot-image-preview-info">
+                                <span id="chatbot-preview-name"></span>
+                                <button class="chatbot-image-preview-remove" id="chatbot-preview-remove">Remove</button>
+                            </div>
+                        </div>
+                        <!-- Voice Recording -->
+                        <div class="chatbot-voice-recording" id="chatbot-voice-recording">
+                            <div class="chatbot-voice-recording-dot"></div>
+                            <div class="chatbot-voice-recording-time" id="chatbot-recording-time">00:00</div>
+                            <div class="chatbot-voice-recording-controls">
+                                <button class="chatbot-voice-btn-stop" id="chatbot-voice-stop">Stop & Send</button>
+                                <button class="chatbot-voice-btn-cancel" id="chatbot-voice-cancel">Cancel</button>
+                            </div>
+                        </div>
                         <div class="chatbot-widget-input-area">
+                            <!-- Emoji Picker -->
+                            <div class="chatbot-emoji-picker" id="chatbot-emoji-picker">
+                                <div class="chatbot-emoji-picker-header">
+                                    <div class="chatbot-emoji-picker-title">Emojis</div>
+                                    <button class="chatbot-emoji-picker-close" id="chatbot-emoji-close">&times;</button>
+                                </div>
+                                <div class="chatbot-emoji-grid" id="chatbot-emoji-grid"></div>
+                            </div>
                             <div class="chatbot-widget-attachments">
                                 ${this.config.emoji_support ? `
                                     <button class="chatbot-widget-attachment-btn" id="chatbot-emoji-btn" title="Add emoji">
@@ -293,6 +469,63 @@
 
             document.head.insertAdjacentHTML('beforeend', styles);
             document.body.insertAdjacentHTML('beforeend', html);
+
+            // Populate emoji picker if emoji support is enabled
+            if (this.config.emoji_support) {
+                this.populateEmojiPicker();
+            }
+        }
+
+        populateEmojiPicker() {
+            const emojiGrid = document.getElementById('chatbot-emoji-grid');
+            if (!emojiGrid) return;
+
+            // Comprehensive emoji library
+            const emojis = [
+                // Smileys & Emotion
+                '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘',
+                '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒',
+                '😞', '😔', '😟', '😕', '🙁', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬',
+                '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐',
+                '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢',
+                // Gestures & Body Parts
+                '👍', '👎', '👊', '✊', '🤛', '🤜', '🤞', '✌️', '🤟', '🤘', '👌', '🤌', '🤏', '👈', '👉', '👆',
+                '👇', '☝️', '✋', '🤚', '🖐️', '🖖', '👋', '🤙', '💪', '🦾', '🖕', '✍️', '🙏', '🦶', '🦵', '🦿',
+                '👂', '🦻', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '👅', '👄', '💋', '🩸',
+                // Hearts & Symbols
+                '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖',
+                '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈',
+                // Nature & Weather
+                '🌍', '🌎', '🌏', '🌐', '🗺️', '🧭', '🏔️', '⛰️', '🌋', '🗻', '🏕️', '🏖️', '🏜️', '🏝️', '🏞️', '🏟️',
+                '🌅', '🌄', '🌠', '🎇', '🎆', '🌇', '🌆', '🏙️', '🌃', '🌌', '🌉', '🌁', '☀️', '🌤️', '⛅', '🌥️',
+                '☁️', '🌦️', '🌧️', '⛈️', '🌩️', '🌨️', '❄️', '☃️', '⛄', '🌬️', '💨', '💧', '💦', '☔', '☂️', '🌊',
+                // Animals
+                '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵',
+                '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗',
+                // Food & Drink
+                '🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥',
+                '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🫒', '🧄', '🧅', '🥔', '🍠',
+                '🍞', '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🧀', '🍖', '🍗', '🥩', '🥓', '🍔', '🍟', '🍕',
+                '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥚', '🍳', '🥘', '🍲', '🫕', '🥣', '🥗', '🍿', '🧈',
+                '☕', '🍵', '🧃', '🥤', '🧋', '🍶', '🍺', '🍻', '🍷', '🥂', '🍸', '🍹', '🧉', '🍾', '🧊', '🥄',
+                // Activities & Objects
+                '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍',
+                '🎯', '🎮', '🕹️', '🎰', '🎲', '🧩', '🎭', '🎨', '🧵', '🪡', '🧶', '🪢', '👓', '🕶️', '🥽', '🥼',
+                '💼', '🎒', '🧳', '👜', '👝', '💍', '💎', '🔊', '📢', '📣', '📯', '🔔', '🎵', '🎶', '🎤', '🎧',
+                '📻', '🎷', '🪗', '🎸', '🎹', '🎺', '🎻', '🪕', '🥁', '🪘', '📱', '📲', '☎️', '📞', '📟', '📠',
+                // Symbols & Flags
+                '✅', '❌', '⭕', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪', '🟥', '🟧', '🟨', '🟩',
+                '🟦', '🟪', '🟫', '⬛', '⬜', '💯', '🔥', '⚡', '💥', '✨', '🌟', '⭐', '💫', '🎉', '🎊', '🎈',
+                '🎁', '🎀', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🏵️', '🎗️', '🎫', '🎟️', '🎪', '🎭', '🎬', '🎨'
+            ];
+
+            emojis.forEach(emoji => {
+                const button = document.createElement('button');
+                button.className = 'chatbot-emoji-item';
+                button.textContent = emoji;
+                button.onclick = () => this.insertEmoji(emoji);
+                emojiGrid.appendChild(button);
+            });
         }
 
         attachEventListeners() {
@@ -328,22 +561,117 @@
                     voiceBtn.addEventListener('click', () => this.toggleVoiceRecording());
                 }
             }
+
+            // Emoji picker close button
+            const emojiClose = document.getElementById('chatbot-emoji-close');
+            if (emojiClose) {
+                emojiClose.addEventListener('click', () => this.hideEmojiPicker());
+            }
+
+            // Image preview remove button
+            const previewRemove = document.getElementById('chatbot-preview-remove');
+            if (previewRemove) {
+                previewRemove.addEventListener('click', () => this.removeImagePreview());
+            }
+
+            // Voice recording controls
+            const voiceStop = document.getElementById('chatbot-voice-stop');
+            const voiceCancel = document.getElementById('chatbot-voice-cancel');
+            if (voiceStop) {
+                voiceStop.addEventListener('click', () => this.stopVoiceRecording());
+            }
+            if (voiceCancel) {
+                voiceCancel.addEventListener('click', () => this.cancelVoiceRecording());
+            }
         }
 
         showEmojiPicker() {
-            // Simple emoji picker - you can replace with a more sophisticated one
-            const emojis = ['😀', '😊', '😂', '😍', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '✅', '❌'];
+            const picker = document.getElementById('chatbot-emoji-picker');
+            if (picker) {
+                picker.classList.add('open');
+            }
+        }
+
+        hideEmojiPicker() {
+            const picker = document.getElementById('chatbot-emoji-picker');
+            if (picker) {
+                picker.classList.remove('open');
+            }
+        }
+
+        insertEmoji(emoji) {
             const input = document.getElementById('chatbot-input');
-            const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-            input.value += emoji;
-            input.focus();
+            if (input) {
+                input.value += emoji;
+                input.focus();
+                this.hideEmojiPicker();
+            }
         }
 
         async handleImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
+            // File size validation (max 5MB)
+            const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+            if (file.size > maxSize) {
+                alert('Image file is too large. Maximum size is 5MB.');
+                event.target.value = '';
+                return;
+            }
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file.');
+                event.target.value = '';
+                return;
+            }
+
+            console.log('[Chatbot Widget] Image selected:', file.name, `(${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+
+            // Show image preview
+            this.selectedImage = file;
+            this.showImagePreview(file);
+
+            // Reset file input
+            event.target.value = '';
+        }
+
+        showImagePreview(file) {
+            const preview = document.getElementById('chatbot-image-preview');
+            const previewImg = document.getElementById('chatbot-preview-img');
+            const previewName = document.getElementById('chatbot-preview-name');
+
+            if (!preview || !previewImg || !previewName) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                previewName.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`;
+                preview.classList.add('show');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        removeImagePreview() {
+            const preview = document.getElementById('chatbot-image-preview');
+            const previewImg = document.getElementById('chatbot-preview-img');
+            const previewName = document.getElementById('chatbot-preview-name');
+
+            if (preview) preview.classList.remove('show');
+            if (previewImg) previewImg.src = '';
+            if (previewName) previewName.textContent = '';
+
+            this.selectedImage = null;
+        }
+
+        async sendImageMessage() {
+            if (!this.selectedImage) return;
+
+            const file = this.selectedImage;
             console.log('[Chatbot Widget] Uploading image:', file.name);
+
+            this.removeImagePreview();
             this.showTypingIndicator();
 
             try {
@@ -363,24 +691,147 @@
 
                 if (data.success && data.message) {
                     this.conversationId = data.conversation_id;
-                    this.addMessageToUI('visitor', `[Image: ${file.name}]`);
+                    this.addMessageToUI('visitor', `📷 Image: ${file.name}`);
                     this.addMessageToUI(data.message.sender_type, data.message.message);
                     this.lastMessageId = data.message.id;
+                } else {
+                    this.addMessageToUI('ai', 'Sorry, there was an error processing the image.');
                 }
             } catch (error) {
                 this.hideTypingIndicator();
                 console.error('[Chatbot Widget] Failed to upload image:', error);
                 this.addMessageToUI('ai', 'Sorry, there was an error uploading the image.');
             }
-
-            // Reset file input
-            event.target.value = '';
         }
 
-        toggleVoiceRecording() {
-            // Placeholder for voice recording functionality
-            console.log('[Chatbot Widget] Voice recording feature coming soon!');
-            this.addMessageToUI('ai', 'Voice messaging feature is coming soon!');
+        async toggleVoiceRecording() {
+            if (this.isRecording) {
+                await this.stopVoiceRecording();
+            } else {
+                await this.startVoiceRecording();
+            }
+        }
+
+        async startVoiceRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                this.mediaRecorder = new MediaRecorder(stream);
+                this.audioChunks = [];
+
+                this.mediaRecorder.ondataavailable = (event) => {
+                    this.audioChunks.push(event.data);
+                };
+
+                this.mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                    await this.sendVoiceMessage(audioBlob);
+
+                    // Stop all tracks
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                this.mediaRecorder.start();
+                this.isRecording = true;
+                this.recordingStartTime = Date.now();
+
+                // Show recording UI
+                const recordingUI = document.getElementById('chatbot-voice-recording');
+                if (recordingUI) recordingUI.classList.add('active');
+
+                // Update timer
+                this.recordingInterval = setInterval(() => this.updateRecordingTime(), 1000);
+
+                console.log('[Chatbot Widget] Voice recording started');
+            } catch (error) {
+                console.error('[Chatbot Widget] Failed to start recording:', error);
+                alert('Unable to access microphone. Please check your browser permissions.');
+            }
+        }
+
+        updateRecordingTime() {
+            if (!this.isRecording || !this.recordingStartTime) return;
+
+            const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const seconds = (elapsed % 60).toString().padStart(2, '0');
+
+            const timeDisplay = document.getElementById('chatbot-recording-time');
+            if (timeDisplay) {
+                timeDisplay.textContent = `${minutes}:${seconds}`;
+            }
+        }
+
+        async stopVoiceRecording() {
+            if (!this.isRecording || !this.mediaRecorder) return;
+
+            this.mediaRecorder.stop();
+            this.isRecording = false;
+
+            // Clear timer
+            if (this.recordingInterval) {
+                clearInterval(this.recordingInterval);
+                this.recordingInterval = null;
+            }
+
+            // Hide recording UI
+            const recordingUI = document.getElementById('chatbot-voice-recording');
+            if (recordingUI) recordingUI.classList.remove('active');
+
+            console.log('[Chatbot Widget] Voice recording stopped');
+        }
+
+        cancelVoiceRecording() {
+            if (!this.isRecording || !this.mediaRecorder) return;
+
+            this.mediaRecorder.stop();
+            this.isRecording = false;
+            this.audioChunks = [];
+
+            // Clear timer
+            if (this.recordingInterval) {
+                clearInterval(this.recordingInterval);
+                this.recordingInterval = null;
+            }
+
+            // Hide recording UI
+            const recordingUI = document.getElementById('chatbot-voice-recording');
+            if (recordingUI) recordingUI.classList.remove('active');
+
+            // Reset time display
+            const timeDisplay = document.getElementById('chatbot-recording-time');
+            if (timeDisplay) timeDisplay.textContent = '00:00';
+
+            console.log('[Chatbot Widget] Voice recording cancelled');
+        }
+
+        async sendVoiceMessage(audioBlob) {
+            console.log('[Chatbot Widget] Sending voice message...');
+            this.showTypingIndicator();
+
+            try {
+                // For now, show a message that voice is recorded
+                // In a full implementation, you'd upload the audio blob
+                const duration = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+                this.hideTypingIndicator();
+                this.addMessageToUI('visitor', `🎤 Voice message (${duration}s)`);
+                this.addMessageToUI('ai', 'Voice message received! (Voice transcription feature coming soon)');
+
+                // Reset time display
+                const timeDisplay = document.getElementById('chatbot-recording-time');
+                if (timeDisplay) timeDisplay.textContent = '00:00';
+
+                // TODO: Implement actual voice upload
+                // const formData = new FormData();
+                // formData.append('audio', audioBlob, 'voice.webm');
+                // formData.append('chatbot_id', this.chatbotId);
+                // formData.append('visitor_id', this.visitorId);
+                // await fetch(`${this.apiUrl}/voice-message`, { method: 'POST', body: formData });
+
+            } catch (error) {
+                this.hideTypingIndicator();
+                console.error('[Chatbot Widget] Failed to send voice message:', error);
+                this.addMessageToUI('ai', 'Sorry, there was an error with the voice message.');
+            }
         }
 
         toggleWidget() {
@@ -399,6 +850,12 @@
         }
 
         async sendMessage() {
+            // Check if there's an image to send
+            if (this.selectedImage) {
+                await this.sendImageMessage();
+                return;
+            }
+
             const input = document.getElementById('chatbot-input');
             const message = input.value.trim();
 
