@@ -452,4 +452,173 @@ class ChatbotController extends Controller
             'embedCode' => $chatbot->getEmbedCode(),
         ]);
     }
+
+    /**
+     * Manage API keys
+     *
+     * @param Request $request
+     * @param string|null $uid Optional chatbot UID for chatbot-specific keys
+     * @return View
+     */
+    public function apiKeys(Request $request, ?string $uid = null): View
+    {
+        $chatbot = null;
+
+        if ($uid) {
+            $chatbot = Chatbot::where('uid', $uid)
+                ->where('user_id', $this->user->id)
+                ->firstOrFail();
+
+            $apiKeys = \App\Models\ChatbotApiKey::where('chatbot_id', $chatbot->id)
+                ->orderBy('provider')
+                ->get();
+
+            $title = translate("API Keys - {$chatbot->name}");
+        } else {
+            $apiKeys = \App\Models\ChatbotApiKey::where('user_id', $this->user->id)
+                ->whereNull('chatbot_id')
+                ->orderBy('provider')
+                ->get();
+
+            $title = translate("My API Keys");
+        }
+
+        $aiManager = new \App\Services\AI\AIManager();
+        $providers = $aiManager->getAvailableProviders();
+
+        return view('user.chatbot.api-keys', [
+            'meta_data' => $this->metaData(['title' => $title]),
+            'chatbot' => $chatbot,
+            'apiKeys' => $apiKeys,
+            'providers' => $providers,
+        ]);
+    }
+
+    /**
+     * Store new API key
+     *
+     * @param Request $request
+     * @param string|null $uid Optional chatbot UID
+     * @return RedirectResponse
+     */
+    public function storeApiKey(Request $request, ?string $uid = null): RedirectResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'provider' => 'required|in:openai,gemini,claude',
+            'key_name' => 'nullable|string|max:100',
+            'api_key' => 'required|string|max:500',
+            'is_default' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->with('error', $validator->errors()->first());
+        }
+
+        try {
+            $chatbot = null;
+
+            if ($uid) {
+                $chatbot = Chatbot::where('uid', $uid)
+                    ->where('user_id', $this->user->id)
+                    ->firstOrFail();
+            }
+
+            $aiManager = new \App\Services\AI\AIManager();
+            $isValid = $aiManager->verifyApiKey($request->provider, $request->api_key);
+
+            if (!$isValid) {
+                return back()->with('error', translate('Invalid API key. Please check and try again.'));
+            }
+
+            if ($request->is_default && !$chatbot) {
+                \App\Models\ChatbotApiKey::where('user_id', $this->user->id)
+                    ->where('provider', $request->provider)
+                    ->whereNull('chatbot_id')
+                    ->update(['is_default' => false]);
+            }
+
+            \App\Models\ChatbotApiKey::create([
+                'user_id' => $this->user->id,
+                'chatbot_id' => $chatbot ? $chatbot->id : null,
+                'provider' => $request->provider,
+                'key_name' => $request->key_name,
+                'api_key' => $request->api_key,
+                'is_default' => $request->is_default ?? false,
+                'status' => 'active',
+                'last_verified_at' => now(),
+            ]);
+
+            return back()->with('success', translate('API key added successfully'));
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Delete API key
+     *
+     * @param string|null $uid Optional chatbot UID
+     * @param int $keyId API key ID
+     * @return RedirectResponse
+     */
+    public function destroyApiKey(?string $uid, int $keyId): RedirectResponse
+    {
+        try {
+            $query = \App\Models\ChatbotApiKey::where('id', $keyId)
+                ->where('user_id', $this->user->id);
+
+            if ($uid) {
+                $chatbot = Chatbot::where('uid', $uid)
+                    ->where('user_id', $this->user->id)
+                    ->firstOrFail();
+
+                $query->where('chatbot_id', $chatbot->id);
+            } else {
+                $query->whereNull('chatbot_id');
+            }
+
+            $apiKey = $query->firstOrFail();
+            $apiKey->delete();
+
+            return back()->with('success', translate('API key deleted successfully'));
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Set API key as default
+     *
+     * @param string|null $uid Optional chatbot UID
+     * @param int $keyId API key ID
+     * @return RedirectResponse
+     */
+    public function setDefaultApiKey(?string $uid, int $keyId): RedirectResponse
+    {
+        try {
+            $chatbot = null;
+
+            if ($uid) {
+                $chatbot = Chatbot::where('uid', $uid)
+                    ->where('user_id', $this->user->id)
+                    ->firstOrFail();
+            }
+
+            $apiKey = \App\Models\ChatbotApiKey::where('id', $keyId)
+                ->where('user_id', $this->user->id)
+                ->where('chatbot_id', $chatbot ? $chatbot->id : null)
+                ->firstOrFail();
+
+            \App\Models\ChatbotApiKey::where('user_id', $this->user->id)
+                ->where('provider', $apiKey->provider)
+                ->where('chatbot_id', $chatbot ? $chatbot->id : null)
+                ->update(['is_default' => false]);
+
+            $apiKey->update(['is_default' => true]);
+
+            return back()->with('success', translate('Default API key updated'));
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
 }
