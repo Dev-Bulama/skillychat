@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\Auth\NewPasswordController;
 use App\Http\Controllers\Admin\CannedContentController;
 use App\Http\Controllers\Admin\CannedVideoContentController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ChatbotController;
 use App\Http\Controllers\Admin\CommunicationsController;
 use App\Http\Controllers\Admin\FrontendManageController;
 use App\Http\Controllers\Admin\HomeController;
@@ -632,6 +633,18 @@ Route::middleware([
 
             });
 
+        });
+
+        /** AI Chatbot System */
+        Route::controller(ChatbotController::class)->name('chatbot.')->prefix('chatbot/')->group(function () {
+            Route::any('/statistics', 'statistics')->name('statistics');
+            Route::any('/list', 'list')->name('list');
+            Route::get('/show/{uid}', 'show')->name('show');
+            Route::any('/conversations', 'conversations')->name('conversations');
+            Route::get('/conversation/{uid}', 'conversationDetails')->name('conversation.details');
+            Route::any('/analytics', 'analytics')->name('analytics');
+            Route::post('/update/status', 'updateStatus')->name('update.status');
+            Route::post('/bulk/action', 'bulk')->name('bulk');
         });
 
         /** system update */

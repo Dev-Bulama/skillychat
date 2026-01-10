@@ -486,8 +486,61 @@
             </li>
             @endif
 
+            @if (check_permission('view_content'))
+            <li class="sidebar-menu-title">
+                {{ translate('AI Chatbot System') }}
+            </li>
+            <li class="sidebar-menu-item">
+                <a class="sidebar-menu-link " data-bs-toggle="collapse" href="#aiChatbot" role="button" aria-expanded="false" aria-controls="aiChatbot">
+                    <span><i class="las la-robot"></i></span>
+                    <p>
+                        {{ translate('AI Chatbots') }}
+                    </p>
+                    <small>
+                        <i class="las la-angle-down"></i>
+                    </small>
+                </a>
+                <div class="side-menu-dropdown collapse {{ sidebar_awake(['admin.chatbot.*'], 'drop_down') }} " id="aiChatbot">
+                    <ul class="sub-menu">
+                        <li class="sub-menu-item">
+                            <a class='sidebar-menu-link {{ sidebar_awake('admin.chatbot.statistics') }}' href='{{ route('admin.chatbot.statistics') }}'>
+                                <span></span>
+                                <p>
+                                    {{ translate('Statistics') }}
+                                </p>
+                            </a>
+                        </li>
 
+                        <li class="sub-menu-item">
+                            <a class='sidebar-menu-link {{ sidebar_awake(['admin.chatbot.list', 'admin.chatbot.show']) }}' href='{{ route('admin.chatbot.list') }}'>
+                                <span></span>
+                                <p>
+                                    {{ translate('All Chatbots') }}
+                                </p>
+                            </a>
+                        </li>
 
+                        <li class="sub-menu-item">
+                            <a class='sidebar-menu-link {{ sidebar_awake('admin.chatbot.conversations') }}' href='{{ route('admin.chatbot.conversations') }}'>
+                                <span></span>
+                                <p>
+                                    {{ translate('Conversations') }}
+                                </p>
+                            </a>
+                        </li>
+
+                        <li class="sub-menu-item">
+                            <a class='sidebar-menu-link {{ sidebar_awake('admin.chatbot.analytics') }}' href='{{ route('admin.chatbot.analytics') }}'>
+                                <span></span>
+                                <p>
+                                    {{ translate('Analytics') }}
+                                </p>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            @endif
 
             <li class="sidebar-menu-title">
                 {{ translate('Frontend Configuration') }}

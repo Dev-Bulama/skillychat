@@ -203,6 +203,45 @@
                         </div>
                     </li>
 
+                    <li class="sidemenu-item">
+                        <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse
+                            @if(request()->routeIs('user.chatbot.*'))
+                                active
+                            @endif">
+                            <div class="sidemenu-icon">
+                                <i class="bi bi-robot"></i>
+                            </div>
+                            <span>
+                                {{ translate("AI Chatbots") }}
+                                <small><i class="bi bi-chevron-down"></i></small>
+                            </span>
+                        </a>
+
+                        <div class="side-menu-dropdown @if(request()->routeIs('user.chatbot.*')) show-sideMenu @endif">
+                            <ul class="sub-menu">
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.chatbot.index') || request()->routeIs('user.chatbot.show') ? 'active' : '' }}" href="{{ route('user.chatbot.index') }}">
+                                        <span><i class="bi bi-list-ul"></i></span>
+                                        <p>{{ translate('My Chatbots') }}</p>
+                                    </a>
+                                </li>
+
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.chatbot.create') ? 'active' : '' }}" href="{{ route('user.chatbot.create') }}">
+                                        <span><i class="bi bi-plus-circle"></i></span>
+                                        <p>{{ translate('Create Chatbot') }}</p>
+                                    </a>
+                                </li>
+
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.api-keys.index') ? 'active' : '' }}" href="{{ route('user.api-keys.index') }}">
+                                        <span><i class="bi bi-key"></i></span>
+                                        <p>{{ translate('API Keys') }}</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
 
                     <li class="sidemenu-item">
                         <a href="{{route('user.plan')}}" class="sidemenu-link  {{request()->routeIs('user.plan') ? 'active' :''}}">
