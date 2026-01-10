@@ -147,13 +147,13 @@ class AIManager
     {
         switch (strtolower($provider)) {
             case 'openai':
-                return new OpenAIService($apiKey, $model);
+                return $model ? new OpenAIService($apiKey, $model) : new OpenAIService($apiKey);
 
             case 'gemini':
-                return new GeminiService($apiKey, $model);
+                return $model ? new GeminiService($apiKey, $model) : new GeminiService($apiKey);
 
             case 'claude':
-                return new ClaudeService($apiKey, $model);
+                return $model ? new ClaudeService($apiKey, $model) : new ClaudeService($apiKey);
 
             default:
                 throw new Exception("Unsupported AI provider: {$provider}");
