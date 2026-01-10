@@ -172,11 +172,40 @@
                         display: flex;
                         align-items: center;
                         justify-content: center;
+                        flex-shrink: 0;
                     }
                     .chatbot-widget-send svg {
                         width: 20px;
                         height: 20px;
                         fill: white;
+                    }
+                    .chatbot-widget-attachment-btn {
+                        background: none;
+                        border: none;
+                        color: #90949c;
+                        cursor: pointer;
+                        padding: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: color 0.2s;
+                        flex-shrink: 0;
+                    }
+                    .chatbot-widget-attachment-btn:hover {
+                        color: ${primaryColor};
+                    }
+                    .chatbot-widget-attachment-btn svg {
+                        width: 20px;
+                        height: 20px;
+                        fill: currentColor;
+                    }
+                    .chatbot-widget-attachments {
+                        display: flex;
+                        gap: 5px;
+                        align-items: center;
+                    }
+                    input[type="file"].chatbot-file-input {
+                        display: none;
                     }
                     .chatbot-typing-indicator {
                         display: flex;
@@ -226,6 +255,31 @@
                             </div>
                         </div>
                         <div class="chatbot-widget-input-area">
+                            <div class="chatbot-widget-attachments">
+                                ${this.config.emoji_support ? `
+                                    <button class="chatbot-widget-attachment-btn" id="chatbot-emoji-btn" title="Add emoji">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+                                        </svg>
+                                    </button>
+                                ` : ''}
+                                ${this.config.image_support ? `
+                                    <button class="chatbot-widget-attachment-btn" id="chatbot-image-btn" title="Upload image">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                                            <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                                        </svg>
+                                    </button>
+                                    <input type="file" class="chatbot-file-input" id="chatbot-image-input" accept="image/*">
+                                ` : ''}
+                                ${this.config.voice_support ? `
+                                    <button class="chatbot-widget-attachment-btn" id="chatbot-voice-btn" title="Voice message">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                                            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                                        </svg>
+                                    </button>
+                                ` : ''}
+                            </div>
                             <input type="text" class="chatbot-widget-input" id="chatbot-input" placeholder="Type a message...">
                             <button class="chatbot-widget-send" id="chatbot-send">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -248,6 +302,85 @@
             document.getElementById('chatbot-input').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') this.sendMessage();
             });
+
+            // Emoji button
+            if (this.config.emoji_support) {
+                const emojiBtn = document.getElementById('chatbot-emoji-btn');
+                if (emojiBtn) {
+                    emojiBtn.addEventListener('click', () => this.showEmojiPicker());
+                }
+            }
+
+            // Image upload button
+            if (this.config.image_support) {
+                const imageBtn = document.getElementById('chatbot-image-btn');
+                const imageInput = document.getElementById('chatbot-image-input');
+                if (imageBtn && imageInput) {
+                    imageBtn.addEventListener('click', () => imageInput.click());
+                    imageInput.addEventListener('change', (e) => this.handleImageUpload(e));
+                }
+            }
+
+            // Voice button
+            if (this.config.voice_support) {
+                const voiceBtn = document.getElementById('chatbot-voice-btn');
+                if (voiceBtn) {
+                    voiceBtn.addEventListener('click', () => this.toggleVoiceRecording());
+                }
+            }
+        }
+
+        showEmojiPicker() {
+            // Simple emoji picker - you can replace with a more sophisticated one
+            const emojis = ['😀', '😊', '😂', '😍', '🤔', '👍', '👎', '❤️', '🎉', '🔥', '✅', '❌'];
+            const input = document.getElementById('chatbot-input');
+            const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+            input.value += emoji;
+            input.focus();
+        }
+
+        async handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            console.log('[Chatbot Widget] Uploading image:', file.name);
+            this.showTypingIndicator();
+
+            try {
+                const formData = new FormData();
+                formData.append('chatbot_id', this.chatbotId);
+                formData.append('visitor_id', this.visitorId);
+                formData.append('image', file);
+                formData.append('prompt', 'What is in this image?');
+
+                const response = await fetch(`${this.apiUrl}/upload-image`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                this.hideTypingIndicator();
+
+                if (data.success && data.message) {
+                    this.conversationId = data.conversation_id;
+                    this.addMessageToUI('visitor', `[Image: ${file.name}]`);
+                    this.addMessageToUI(data.message.sender_type, data.message.message);
+                    this.lastMessageId = data.message.id;
+                }
+            } catch (error) {
+                this.hideTypingIndicator();
+                console.error('[Chatbot Widget] Failed to upload image:', error);
+                this.addMessageToUI('ai', 'Sorry, there was an error uploading the image.');
+            }
+
+            // Reset file input
+            event.target.value = '';
+        }
+
+        toggleVoiceRecording() {
+            // Placeholder for voice recording functionality
+            console.log('[Chatbot Widget] Voice recording feature coming soon!');
+            this.addMessageToUI('ai', 'Voice messaging feature is coming soon!');
         }
 
         toggleWidget() {
@@ -277,31 +410,40 @@
             this.showTypingIndicator();
 
             try {
+                const payload = {
+                    chatbot_id: this.chatbotId,
+                    visitor_id: this.visitorId,
+                    message: message,
+                    page_url: window.location.href,
+                    referrer: document.referrer || null
+                };
+
+                console.log('[Chatbot Widget] Sending message with payload:', payload);
+
                 const response = await fetch(`${this.apiUrl}/message`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        chatbot_id: this.chatbotId,
-                        visitor_id: this.visitorId,
-                        message: message,
-                        page_url: window.location.href,
-                        referrer: document.referrer
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 const data = await response.json();
+                console.log('[Chatbot Widget] Message response:', data);
                 this.hideTypingIndicator();
 
                 if (data.success && data.message) {
                     this.conversationId = data.conversation_id;
                     this.addMessageToUI(data.message.sender_type, data.message.message);
                     this.lastMessageId = data.message.id;
+                } else if (data.errors) {
+                    console.error('[Chatbot Widget] Validation errors:', data.errors);
+                    this.addMessageToUI('ai', 'Sorry, there was an error processing your message. Please try again.');
                 }
             } catch (error) {
                 this.hideTypingIndicator();
-                console.error('Failed to send message:', error);
+                console.error('[Chatbot Widget] Failed to send message:', error);
+                this.addMessageToUI('ai', 'Sorry, there was an error. Please try again later.');
             }
         }
 
