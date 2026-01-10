@@ -48,7 +48,6 @@
                             <th scope="col">{{translate('Name')}}</th>
                             <th scope="col">{{translate('User')}}</th>
                             <th scope="col">{{translate('AI Provider')}}</th>
-                            <th scope="col">{{translate('Widget Type')}}</th>
                             <th scope="col">{{translate('Human Takeover')}}</th>
                             <th scope="col">{{translate('Status')}}</th>
                             <th scope="col">{{translate('Created At')}}</th>
@@ -90,11 +89,6 @@
                                         {{ ucfirst($chatbot->ai_provider) }}
                                     </span>
                                 </td>
-                                <td data-label="{{translate('Widget Type')}}">
-                                    <span class="badge badge--dark">
-                                        {{ ucfirst($chatbot->widget_type) }}
-                                    </span>
-                                </td>
                                 <td data-label="{{translate('Human Takeover')}}">
                                     <span class="badge badge--{{ $chatbot->human_takeover_enabled ? 'success' : 'secondary' }}">
                                         {{ $chatbot->human_takeover_enabled ? translate('Enabled') : translate('Disabled') }}
@@ -109,9 +103,9 @@
                                             data-column="status"
                                             data-route="{{ route('admin.chatbot.update.status') }}"
                                             data-model="Chatbot"
-                                            data-status="{{ $chatbot->status == '1' ? '0' : '1' }}"
+                                            data-status="{{ $chatbot->status == 'active' ? '0' : '1' }}"
                                             data-id="{{ $chatbot->id }}"
-                                            {{ $chatbot->status == '1' ? 'checked' : '' }}
+                                            {{ $chatbot->status == 'active' ? 'checked' : '' }}
                                             id="status-switch-{{ $chatbot->id }}">
                                         <label class="form-check-label" for="status-switch-{{ $chatbot->id }}"></label>
                                     </div>
@@ -130,7 +124,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td class="text-muted text-center" colspan="9">{{ translate('No Data Found') }}</td>
+                                <td class="text-muted text-center" colspan="8">{{ translate('No Data Found') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

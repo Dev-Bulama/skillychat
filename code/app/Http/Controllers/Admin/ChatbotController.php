@@ -42,7 +42,7 @@ class ChatbotController extends Controller
     {
         $statistics = [
             'total_chatbots' => Chatbot::count(),
-            'active_chatbots' => Chatbot::where('status', StatusEnum::true->status())->count(),
+            'active_chatbots' => Chatbot::where('status', 'active')->count(),
             'total_conversations' => ChatbotConversation::count(),
             'active_conversations' => ChatbotConversation::whereIn('status', ['ai_active', 'human_active'])->count(),
             'total_messages' => ChatbotMessage::count(),
@@ -93,8 +93,9 @@ class ChatbotController extends Controller
         $title = translate('All AI Chatbots');
 
         $chatbots = Chatbot::with('user')
-            ->filter($request)
-            ->date($request)
+            ->search(['name', 'user:name,email'])
+            ->filter(['status', 'ai_provider'])
+            ->date()
             ->latest()
             ->paginate(paginateNumber())
             ->appends($request->all());
@@ -148,8 +149,9 @@ class ChatbotController extends Controller
         $title = translate('All Chatbot Conversations');
 
         $conversations = ChatbotConversation::with(['chatbot', 'chatbot.user', 'assignedAgent'])
-            ->filter($request)
-            ->date($request)
+            ->search(['visitor_id'])
+            ->filter(['status', 'chatbot_id'])
+            ->date()
             ->latest()
             ->paginate(paginateNumber())
             ->appends($request->all());
@@ -256,7 +258,7 @@ class ChatbotController extends Controller
 
         $chatbot = Chatbot::findOrFail($request->id);
         $chatbot->update([
-            'status' => $request->status
+            'status' => $request->status == '1' ? 'active' : 'inactive'
         ]);
 
         $message = translate('Chatbot status updated successfully');
@@ -282,11 +284,11 @@ class ChatbotController extends Controller
 
         switch ($request->action) {
             case 'activate':
-                $chatbots->update(['status' => StatusEnum::true->status()]);
+                $chatbots->update(['status' => 'active']);
                 $message = translate('Chatbots activated successfully');
                 break;
             case 'deactivate':
-                $chatbots->update(['status' => StatusEnum::false->status()]);
+                $chatbots->update(['status' => 'inactive']);
                 $message = translate('Chatbots deactivated successfully');
                 break;
             case 'delete':

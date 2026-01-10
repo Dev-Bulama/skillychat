@@ -174,8 +174,8 @@
                                             </span>
                                         </td>
                                         <td>
-                                            <span class="badge badge--{{ $chatbot->status == 1 ? 'success' : 'danger' }}">
-                                                {{ $chatbot->status == 1 ? translate('Active') : translate('Inactive') }}
+                                            <span class="badge badge--{{ $chatbot->status == 'active' ? 'success' : 'danger' }}">
+                                                {{ $chatbot->status == 'active' ? translate('Active') : translate('Inactive') }}
                                             </span>
                                         </td>
                                         <td>{{ diff_for_humans($chatbot->created_at) }}</td>
