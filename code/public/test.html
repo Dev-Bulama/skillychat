@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Widget Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #2196F3;
+        }
+        .success {
+            background: #e8f5e9;
+            border-left-color: #4CAF50;
+        }
+        .warning {
+            background: #fff3e0;
+            border-left-color: #FF9800;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .debug-console {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Chatbot Widget Test Page</h1>
+
+        <div class="info success">
+            <strong>✓ Test Page Loaded Successfully!</strong><br>
+            If you can see this page, your web server is working.
+        </div>
+
+        <div class="info">
+            <strong>What should happen:</strong>
+            <ol>
+                <li>A chat bubble should appear in the bottom-right corner of this page</li>
+                <li>Check the browser console (F12) for debug messages</li>
+                <li>Look for messages starting with <code>[Chatbot Widget]</code></li>
+            </ol>
+        </div>
+
+        <div class="info warning">
+            <strong>⚠ Troubleshooting Steps:</strong>
+            <ol>
+                <li><strong>Open Browser Console:</strong> Press F12 and click the "Console" tab</li>
+                <li><strong>Check for errors:</strong> Look for red error messages</li>
+                <li><strong>Verify chatbot ID:</strong> Make sure the data-chatbot-id below matches your chatbot's UID</li>
+                <li><strong>Check API URL:</strong> The widget will try to fetch config from the API endpoint</li>
+                <li><strong>CORS Issues:</strong> If you see CORS errors, the API needs to allow cross-origin requests</li>
+            </ol>
+        </div>
+
+        <h2>Current Configuration:</h2>
+        <div class="debug-console">
+            <div>Chatbot ID: <span id="chatbot-id-display">Loading...</span></div>
+            <div>API URL: <span id="api-url-display">Loading...</span></div>
+            <div>Widget Script: <span id="widget-script-display">Loading...</span></div>
+            <div>Page URL: <span id="page-url-display"></span></div>
+        </div>
+
+        <h2>Sample Content</h2>
+        <p>This is a test page to verify that the chatbot widget loads correctly. The chat bubble should appear in the bottom-right corner of this page.</p>
+
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+
+        <h3>Instructions for Your Own Pages:</h3>
+        <p>To add the chatbot to your website, copy this script tag and paste it before the closing <code>&lt;/body&gt;</code> tag:</p>
+        <div class="debug-console">
+&lt;script src="http://localhost/skillchat/kode/public/widget.js"
+        data-chatbot-id="YOUR-CHATBOT-ID-HERE"
+        data-api-url="http://localhost/skillchat/api/chatbot"&gt;&lt;/script&gt;
+        </div>
+
+        <p><strong>Note:</strong> Replace <code>YOUR-CHATBOT-ID-HERE</code> with your actual chatbot UID (the one shown above).</p>
+    </div>
+
+    <!--
+        IMPORTANT: Update these values:
+        1. Replace YOUR-CHATBOT-ID with your actual chatbot UID
+        2. Adjust the widget.js path based on your XAMPP setup:
+           - If accessing via http://localhost/skillchat/ use: /skillchat/kode/public/widget.js
+           - If you have a virtual host use the appropriate path
+        3. Set data-api-url to match your Laravel app URL
+    -->
+    <script>
+        // Display current page info
+        document.getElementById('page-url-display').textContent = window.location.href;
+
+        // Try to get script info after widget loads
+        setTimeout(function() {
+            const widgetScript = document.querySelector('script[data-chatbot-id]');
+            if (widgetScript) {
+                document.getElementById('chatbot-id-display').textContent = widgetScript.getAttribute('data-chatbot-id');
+                document.getElementById('api-url-display').textContent = widgetScript.getAttribute('data-api-url') || '/api/chatbot';
+                document.getElementById('widget-script-display').textContent = widgetScript.getAttribute('src');
+            } else {
+                document.getElementById('chatbot-id-display').textContent = 'ERROR: Widget script not found!';
+            }
+        }, 100);
+    </script>
+
+    <!-- CHATBOT WIDGET - REPLACE THE VALUES BELOW -->
+    <script src="http://localhost/skillchat/kode/public/widget.js"
+            data-chatbot-id="85c081ed-edfe-44d0-9e24-a3d5629ed8b4"
+            data-api-url="http://localhost/skillchat/api/chatbot"></script>
+</body>
+</html>
