@@ -142,6 +142,11 @@ class Chatbot extends Model
         return $this->human_takeover_enabled;
     }
 
+    public function canUseVoice(): bool
+    {
+        return $this->voice_support;
+    }
+
     public function getEmbedCode(): string
     {
         $widgetUrl = asset('widget.js');

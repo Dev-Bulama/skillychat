@@ -805,32 +805,56 @@
         }
 
         async sendVoiceMessage(audioBlob) {
-            console.log('[Chatbot Widget] Sending voice message...');
+            const duration = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+            console.log('[Chatbot Widget] Sending voice message...', `Duration: ${duration}s`, `Size: ${(audioBlob.size / 1024).toFixed(2)}KB`);
+
             this.showTypingIndicator();
 
             try {
-                // For now, show a message that voice is recorded
-                // In a full implementation, you'd upload the audio blob
-                const duration = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+                // Upload voice to backend for transcription
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'voice.webm');
+                formData.append('chatbot_id', this.chatbotId);
+                formData.append('visitor_id', this.visitorId);
+
+                const response = await fetch(`${this.apiUrl}/voice-message`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                console.log('[Chatbot Widget] Voice response:', data);
                 this.hideTypingIndicator();
-                this.addMessageToUI('visitor', `🎤 Voice message (${duration}s)`);
-                this.addMessageToUI('ai', 'Voice message received! (Voice transcription feature coming soon)');
+
+                if (data.success) {
+                    this.conversationId = data.conversation_id;
+
+                    // Show voice message with transcription
+                    const transcription = data.transcription || 'Voice message';
+                    this.addMessageToUI('visitor', `🎤 ${transcription} (${duration}s)`);
+
+                    // Show AI response
+                    if (data.message) {
+                        this.addMessageToUI(data.message.sender_type, data.message.message);
+                        this.lastMessageId = data.message.id;
+                    }
+                } else {
+                    console.error('[Chatbot Widget] Voice upload failed:', data);
+                    this.addMessageToUI('ai', 'Sorry, there was an error processing the voice message.');
+                }
 
                 // Reset time display
                 const timeDisplay = document.getElementById('chatbot-recording-time');
                 if (timeDisplay) timeDisplay.textContent = '00:00';
 
-                // TODO: Implement actual voice upload
-                // const formData = new FormData();
-                // formData.append('audio', audioBlob, 'voice.webm');
-                // formData.append('chatbot_id', this.chatbotId);
-                // formData.append('visitor_id', this.visitorId);
-                // await fetch(`${this.apiUrl}/voice-message`, { method: 'POST', body: formData });
-
             } catch (error) {
                 this.hideTypingIndicator();
                 console.error('[Chatbot Widget] Failed to send voice message:', error);
                 this.addMessageToUI('ai', 'Sorry, there was an error with the voice message.');
+
+                // Reset time display
+                const timeDisplay = document.getElementById('chatbot-recording-time');
+                if (timeDisplay) timeDisplay.textContent = '00:00';
             }
         }
 

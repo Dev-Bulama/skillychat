@@ -36,8 +36,8 @@ class ChatController extends Controller
             'message' => 'required|string|max:5000',
             'visitor_name' => 'nullable|string|max:255',
             'visitor_email' => 'nullable|email|max:255',
-            'page_url' => 'nullable|url|max:500',
-            'referrer' => 'nullable|url|max:500',
+            'page_url' => 'nullable|string|max:500',
+            'referrer' => 'nullable|string|max:500',
         ]);
 
         if ($validator->fails()) {
@@ -251,6 +251,79 @@ class ChatController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to process image.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload voice message to chatbot
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function uploadVoice(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'chatbot_id' => 'required|string|exists:chatbots,uid',
+            'visitor_id' => 'required|string|max:255',
+            'audio' => 'required|file|mimes:webm,ogg,mp3,wav,m4a|max:10240', // Max 10MB
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $chatbot = Chatbot::where('uid', $request->input('chatbot_id'))
+                ->active()
+                ->firstOrFail();
+
+            if (!$chatbot->canUseVoice()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Voice support is not enabled for this chatbot.',
+                ], 403);
+            }
+
+            $conversation = $this->chatbotService->getOrCreateConversation(
+                $chatbot,
+                $request->input('visitor_id'),
+                ['ip' => $request->ip(), 'user_agent' => $request->userAgent()]
+            );
+
+            // Process voice message and transcribe
+            $message = $this->chatbotService->processVoiceMessage(
+                $chatbot,
+                $conversation,
+                $request->file('audio')
+            );
+
+            $aiResponse = ChatbotMessage::where('conversation_id', $conversation->id)
+                ->where('sender_type', 'ai')
+                ->latest()
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'conversation_id' => $conversation->uid,
+                'transcription' => $message->message ?? null,
+                'message' => $aiResponse ? [
+                    'id' => $aiResponse->uid,
+                    'message' => $aiResponse->message,
+                    'sender_type' => $aiResponse->sender_type,
+                    'created_at' => $aiResponse->created_at->toIso8601String(),
+                ] : null,
+            ]);
+        } catch (Exception $e) {
+            Log::error('ChatController::uploadVoice error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process voice message.',
                 'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
