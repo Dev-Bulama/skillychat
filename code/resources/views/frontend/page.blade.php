@@ -7,7 +7,7 @@
       <div class="row">
           <div class="col-lg-12">
               <div class="page-content text-editor-content linear-bg">
-                  @php echo translate(@$page->description) @endphp
+                  {!! @$page->description !!}
               </div>
           </div>
       </div>

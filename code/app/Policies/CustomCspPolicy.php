@@ -36,18 +36,24 @@ class CustomCspPolicy extends Basic
             "'unsafe-inline'",
             'https://www.gstatic.com/',
             'https://www.gstatic.com/charts/49/css/util/util.css',
-
-
-
+            'https://cdn.tailwindcss.com',
+            'https://cdn.jsdelivr.net',
+            'https://cdnjs.cloudflare.com',
+            'https://unpkg.com',
+            'https://fonts.googleapis.com',
         ]);
 
         $this->addDirective(Directive::SCRIPT, [
             "'self'",
             "'nonce-{$nonce}'",
+            "'unsafe-inline'",
             'https://www.google.com',
-            'https://www.gstatic.com/' ,
-            'https://www.gstatic.com/charts/geochart/10/info/mapList.js'
-
+            'https://www.gstatic.com/',
+            'https://www.gstatic.com/charts/geochart/10/info/mapList.js',
+            'https://cdn.tailwindcss.com',
+            'https://cdn.jsdelivr.net',
+            'https://cdnjs.cloudflare.com',
+            'https://unpkg.com',
         ]);
 
 
