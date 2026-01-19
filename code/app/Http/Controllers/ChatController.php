@@ -391,6 +391,8 @@ class ChatController extends Controller
                     'offline_message' => $chatbot->offline_message,
                     'primary_color' => $chatbot->primary_color,
                     'widget_position' => $chatbot->widget_position,
+                    'bubble_style' => $chatbot->bubble_style ?? 'classic',
+                    'attention_message' => $chatbot->attention_message,
                     'emoji_support' => $chatbot->emoji_support,
                     'voice_support' => $chatbot->voice_support,
                     'image_support' => $chatbot->image_support,
