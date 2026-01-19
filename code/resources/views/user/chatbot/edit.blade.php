@@ -91,9 +91,26 @@
                 </div>
 
                 <div class="col-md-4">
+                    <label for="bubble_style" class="form-label">{{translate('Chat Bubble Style')}}</label>
+                    <select class="form-select" id="bubble_style" name="bubble_style">
+                        <option value="classic" {{old('bubble_style', $chatbot->bubble_style ?? 'classic') == 'classic' ? 'selected' : ''}}>{{translate('Classic')}}</option>
+                        <option value="modern" {{old('bubble_style', $chatbot->bubble_style) == 'modern' ? 'selected' : ''}}>{{translate('Modern Rounded')}}</option>
+                        <option value="minimal" {{old('bubble_style', $chatbot->bubble_style) == 'minimal' ? 'selected' : ''}}>{{translate('Minimal Flat')}}</option>
+                        <option value="gradient" {{old('bubble_style', $chatbot->bubble_style) == 'gradient' ? 'selected' : ''}}>{{translate('Gradient Flow')}}</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
                     <label for="primary_color" class="form-label">{{translate('Primary Color')}}</label>
                     <input type="color" class="form-control" id="primary_color" name="primary_color"
                         value="{{old('primary_color', $chatbot->primary_color)}}">
+                </div>
+
+                <div class="col-md-12">
+                    <label for="attention_message" class="form-label">{{translate('Attention Message')}} <small class="text-muted">({{translate('Optional')}})</small></label>
+                    <input type="text" class="form-control" id="attention_message" name="attention_message"
+                        value="{{old('attention_message', $chatbot->attention_message)}}" placeholder="{{translate('e.g., Need help? Chat with us 👋')}}" maxlength="255">
+                    <small class="text-muted">{{translate('A short message displayed on the chat bubble to grab attention')}}</small>
                 </div>
 
                 <div class="col-md-12">
