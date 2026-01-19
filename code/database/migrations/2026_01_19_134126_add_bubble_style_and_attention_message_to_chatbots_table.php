@@ -1,0 +1,29 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('chatbots', function (Blueprint $table) {
+            $table->string('bubble_style', 50)->default('classic')->after('widget_position');
+            $table->string('attention_message', 255)->nullable()->after('bubble_style');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('chatbots', function (Blueprint $table) {
+            $table->dropColumn(['bubble_style', 'attention_message']);
+        });
+    }
+};

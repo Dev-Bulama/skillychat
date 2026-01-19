@@ -26,6 +26,8 @@ class Chatbot extends Model
         'offline_message',
         'primary_color',
         'widget_position',
+        'bubble_style',
+        'attention_message',
         'status',
         'settings',
         'emoji_support',
