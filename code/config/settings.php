@@ -408,12 +408,16 @@ return [
 
     'ai_video_generation_model' => [
         'kling-v1'     => 'Kling V1',
+        'runway-gen3'  => 'Runway Gen-3 Alpha',
+        'pika-v1'      => 'Pika 1.0',
     ],
 
     'ai_video_secret' => [
         // 'open_ai'       => 'Open AI',
         // 'leonardo_ai'       => 'Leonardo Ai',
-        'kling_ai' => 'Kling'
+        'kling_ai'     => 'Kling',
+        'runway_ml'    => 'Runway ML',
+        'pika_labs'    => 'Pika Labs',
     ],
 
     // 'ai_video_resolution' => [
