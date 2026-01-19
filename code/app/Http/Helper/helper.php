@@ -197,6 +197,32 @@ if (!function_exists('kling_ai_video_key')) {
 
 }
 
+if (!function_exists('runway_ml_video_key')) {
+    /**
+     * Get Runway ML video generation API key
+     *
+     * @return string
+     */
+    function runway_ml_video_key(): string
+    {
+        $key = site_settings("runway_ml_video_secret");
+        return $key;
+    }
+}
+
+if (!function_exists('pika_labs_video_key')) {
+    /**
+     * Get Pika Labs video generation API key
+     *
+     * @return string
+     */
+    function pika_labs_video_key(): string
+    {
+        $key = site_settings("pika_labs_video_secret");
+        return $key;
+    }
+}
+
 
 if (!function_exists('site_currencies')) {
     function site_currencies(): mixed

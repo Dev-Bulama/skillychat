@@ -250,12 +250,31 @@
                                                 <div class="row g-3 model-info-wrapper">
                                                     <div class="col-lg-12">
                                                         <div class="model-section">
-                                                            <h3 class="model-title">{{ translate('Kling AI (Video)') }}</h3>
+                                                            <h3 class="model-title">{{ translate('Video Generation Providers') }}</h3>
+
+                                                            <div class="resolutions mb-4">
+                                                                <h4 class="mt-3"><i class="las la-video"></i> {{ translate('Kling AI') }}</h4>
+                                                                <p><strong>{{ translate('Model:') }}</strong> Kling V1</p>
+                                                                <p>{{ translate('High-quality video generation with 1080p output, 5-10 second durations.') }}</p>
+                                                                <p><strong>{{ translate('Best for:') }}</strong> {{ translate('General purpose, realistic videos') }}</p>
+                                                            </div>
+
+                                                            <div class="resolutions mb-4">
+                                                                <h4 class="mt-3"><i class="las la-film"></i> {{ translate('Runway ML') }}</h4>
+                                                                <p><strong>{{ translate('Model:') }}</strong> Gen-3 Alpha</p>
+                                                                <p>{{ translate('Fast, affordable video generation with excellent quality.') }}</p>
+                                                                <p><strong>{{ translate('Best for:') }}</strong> {{ translate('Quick iterations, cost-effective projects') }}</p>
+                                                            </div>
+
                                                             <div class="resolutions">
-                                                                <p><span>{{ translate('Note:') }}</span></p>
-                                                                <p>{{ translate('Kling AI generates high-quality videos from text prompts. For best results, provide clear, descriptive prompts.') }}</p>
-                                                                <p>{{ translate('Default output is 1080p with durations up to 5–10 seconds.') }}</p>
-                                                                <p><strong>{{ translate('Model Used:') }}</strong> {{ translate('Kling V1') }}</p>
+                                                                <h4 class="mt-3"><i class="las la-magic"></i> {{ translate('Pika Labs') }}</h4>
+                                                                <p><strong>{{ translate('Model:') }}</strong> Pika 1.0</p>
+                                                                <p>{{ translate('Creative AI video with unique artistic styles and effects.') }}</p>
+                                                                <p><strong>{{ translate('Best for:') }}</strong> {{ translate('Creative content, artistic videos') }}</p>
+                                                            </div>
+
+                                                            <div class="alert alert-info mt-4" role="alert">
+                                                                <strong>{{ translate('Tip:') }}</strong> {{ translate('Choose the provider based on your budget and quality needs. All providers support the same aspect ratios.') }}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -434,11 +453,24 @@
                                         </div>
                                         <div class="card-body">
                                             <div class="alert alert-info" role="alert">
-                                                <strong>{{ translate('Get your API key here:') }}</strong>
-                                                <a href="https://klingai.com/global/dev/model/video" target="_blank" rel="noopener noreferrer">
-                                                    {{ translate('Kling AI') }}
-                                                </a>
-
+                                                <strong>{{ translate('Get your API keys here:') }}</strong>
+                                                <ul class="mb-0">
+                                                    <li>
+                                                        <a href="https://klingai.com/global/dev/model/video" target="_blank" rel="noopener noreferrer">
+                                                            <i class="las la-video"></i> {{ translate('Kling AI Developer Portal') }}
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a href="https://dev.runwayml.com/" target="_blank" rel="noopener noreferrer">
+                                                            <i class="las la-film"></i> {{ translate('Runway ML API Dashboard') }}
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a href="https://pika.art/api" target="_blank" rel="noopener noreferrer">
+                                                            <i class="las la-magic"></i> {{ translate('Pika Labs API Access') }}
+                                                        </a>
+                                                    </li>
+                                                </ul>
                                             </div>
 
                                             <div class="row">

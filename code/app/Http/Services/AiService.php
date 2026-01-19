@@ -858,6 +858,20 @@ class AiService
                 'task_endpoint' => 'https://api.klingai.com/v1/videos/text2video',
                 'status_endpoint' => 'https://api.klingai.com/v1/videos/task',
             ],
+            'runway-gen3' => [
+                'provider' => 'runway_ml',
+                'api_key_func' => 'runway_ml_video_key',
+                'supported_aspect_ratio' => ['9:16', '16:9', '1:1'],
+                'task_endpoint' => 'https://api.runwayml.com/v1/image_to_video',
+                'status_endpoint' => 'https://api.runwayml.com/v1/tasks',
+            ],
+            'pika-v1' => [
+                'provider' => 'pika_labs',
+                'api_key_func' => 'pika_labs_video_key',
+                'supported_aspect_ratio' => ['9:16', '16:9', '1:1'],
+                'task_endpoint' => 'https://api.pika.art/generate/video',
+                'status_endpoint' => 'https://api.pika.art/video',
+            ],
         ];
 
 
@@ -1005,6 +1019,122 @@ class AiService
                 if ($attempt >= $max_attempts) {
                     throw new \Exception(translate("Video generation timed out"));
                 }
+            } elseif ($provider === 'runway_ml') {
+                $apiKey = call_user_func($config['api_key_func']);
+                if (empty($apiKey)) {
+                    throw new \Exception("API key is missing for Runway ML");
+                }
+
+                $payload = [
+                    'text_prompt' => $aiParams['prompt'],
+                    'model' => 'gen3a_turbo',
+                    'duration' => $aiParams['duration'] ?? 5,
+                    'ratio' => $aspect_ratio,
+                    'watermark' => false,
+                ];
+
+                // Create video generation task
+                $task_response = $this->makeRunwayApiRequest($config['task_endpoint'], $payload, $apiKey, 'POST');
+                $task_data = $task_response->json();
+
+                if ($task_response->failed() || !isset($task_data['id'])) {
+                    throw new \Exception($task_data['error'] ?? translate("Failed to create Runway video task"));
+                }
+
+                $task_id = $task_data['id'];
+
+                // Poll task status
+                $max_attempts = 30;
+                $attempt = 0;
+                $poll_interval = 10;
+
+                while ($attempt < $max_attempts) {
+                    $status_response = $this->makeRunwayApiRequest($config['status_endpoint'] . '/' . $task_id, [], $apiKey, 'GET');
+                    $status_data = $status_response->json();
+
+                    if ($status_response->failed()) {
+                        throw new \Exception($status_data['error'] ?? translate("Failed to retrieve task status"));
+                    }
+
+                    if ($status_data['status'] === 'SUCCEEDED' && isset($status_data['output'][0])) {
+                        $video_url = $status_data['output'][0];
+
+                        // Log usage and save
+                        $this->logVideoUsage($logData, $aiParams['model_name'], $video_url);
+
+                        $status = true;
+                        $message = translate('Video generated successfully with Runway ML');
+                        break;
+                    } elseif ($status_data['status'] === 'FAILED') {
+                        throw new \Exception($status_data['failure'] ?? translate("Runway video generation failed"));
+                    }
+
+                    $attempt++;
+                    sleep($poll_interval);
+                }
+
+                if ($attempt >= $max_attempts) {
+                    throw new \Exception(translate("Runway video generation timed out"));
+                }
+            } elseif ($provider === 'pika_labs') {
+                $apiKey = call_user_func($config['api_key_func']);
+                if (empty($apiKey)) {
+                    throw new \Exception("API key is missing for Pika Labs");
+                }
+
+                $payload = [
+                    'prompt' => $aiParams['prompt'],
+                    'aspectRatio' => $aspect_ratio,
+                    'frameRate' => 24,
+                    'options' => [
+                        'model' => 'pika-1.0',
+                        'duration' => $aiParams['duration'] ?? 3,
+                    ],
+                ];
+
+                // Create video generation task
+                $task_response = $this->makePikaApiRequest($config['task_endpoint'], $payload, $apiKey, 'POST');
+                $task_data = $task_response->json();
+
+                if ($task_response->failed() || !isset($task_data['id'])) {
+                    throw new \Exception($task_data['error'] ?? translate("Failed to create Pika video task"));
+                }
+
+                $task_id = $task_data['id'];
+
+                // Poll task status
+                $max_attempts = 30;
+                $attempt = 0;
+                $poll_interval = 10;
+
+                while ($attempt < $max_attempts) {
+                    $status_response = $this->makePikaApiRequest($config['status_endpoint'] . '/' . $task_id, [], $apiKey, 'GET');
+                    $status_data = $status_response->json();
+
+                    if ($status_response->failed()) {
+                        throw new \Exception($status_data['error'] ?? translate("Failed to retrieve Pika task status"));
+                    }
+
+                    if ($status_data['status'] === 'finished' && isset($status_data['video']['url'])) {
+                        $video_url = $status_data['video']['url'];
+
+                        // Log usage and save
+                        $this->logVideoUsage($logData, $aiParams['model_name'], $video_url);
+
+                        $status = true;
+                        $message = translate('Video generated successfully with Pika Labs');
+                        break;
+                    } elseif ($status_data['status'] === 'failed') {
+                        throw new \Exception($status_data['error'] ?? translate("Pika video generation failed"));
+                    }
+
+                    $attempt++;
+                    sleep($poll_interval);
+                }
+
+                if ($attempt >= $max_attempts) {
+                    throw new \Exception(translate("Pika video generation timed out"));
+                }
             } else {
                 throw new \Exception("Unsupported provider: {$provider}");
             }
@@ -1046,6 +1176,99 @@ class AiService
         }
 
         return $response;
+    }
+
+    /**
+     * Helper method to make API request to Runway ML
+     */
+    private function makeRunwayApiRequest(string $endpoint, array $payload, string $apiKey, string $method = 'POST')
+    {
+        $headers = [
+            'Authorization' => 'Bearer ' . $apiKey,
+            'Content-Type' => 'application/json',
+            'X-Runway-Version' => '2024-11-06',
+        ];
+
+        $request = Http::withHeaders($headers);
+
+        if ($method === 'POST') {
+            $response = $request->post($endpoint, $payload);
+        } else {
+            $response = $request->get($endpoint);
+        }
+
+        return $response;
+    }
+
+    /**
+     * Helper method to make API request to Pika Labs
+     */
+    private function makePikaApiRequest(string $endpoint, array $payload, string $apiKey, string $method = 'POST')
+    {
+        $headers = [
+            'Authorization' => $apiKey,
+            'Content-Type' => 'application/json',
+        ];
+
+        $request = Http::withHeaders($headers);
+
+        if ($method === 'POST') {
+            $response = $request->post($endpoint, $payload);
+        } else {
+            $response = $request->get($endpoint);
+        }
+
+        return $response;
+    }
+
+    /**
+     * Helper method to log video usage across all providers
+     */
+    private function logVideoUsage(array $logData, string $model, string $video_url): void
+    {
+        $usage = [
+            'model' => $model,
+            'generated_videos' => 1,
+        ];
+
+        DB::transaction(function () use ($logData, $usage, $video_url) {
+            $templateId = Arr::get($logData, 'template_id', null);
+
+            if ($templateId) {
+                $templateLog = new TemplateUsage();
+                $templateLog->user_id = Arr::get($logData, 'user_id', null);
+                $templateLog->admin_id = Arr::get($logData, 'admin_id', null);
+                $templateLog->template_id = $templateId;
+                $templateLog->package_id = Arr::get($logData, 'package_id', null);
+                $templateLog->open_ai_usage = $usage;
+                $templateLog->videos = [$video_url];
+                $templateLog->total_videos = $usage['generated_videos'];
+                $templateLog->type = AiModuleType::VIDEO->value;
+                $templateLog->save();
+            }
+
+            if (request()->routeIs("user.*")) {
+                $video_count = $usage['generated_videos'];
+                $user = auth_user('web')->load(['runningSubscription']);
+
+                $details = "{$video_count} video(s) generated using custom prompt";
+                if ($templateId) {
+                    $details = "{$video_count} video(s) generated using (" . @$templateLog->template->name . ") Template";
+                }
+
+                $this->generateCreditLog(
+                    user: $user,
+                    trxType: Transaction::$MINUS,
+                    balance: $video_count,
+                    credit_type: 'video',
+                    details: $details,
+                );
+
+                if ($user->runningSubscription) {
+                    $user->runningSubscription->decrement('remaining_video_balance', $video_count);
+                }
+            }
+        });
     }
 
     public function useMock($endpoint)
