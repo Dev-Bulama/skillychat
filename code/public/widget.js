@@ -68,6 +68,7 @@
                         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
                     }
                     .chatbot-widget-button {
+                        position: relative;
                         width: 60px;
                         height: 60px;
                         border-radius: 50%;
@@ -87,6 +88,79 @@
                         width: 30px;
                         height: 30px;
                         fill: white;
+                    }
+
+                    /* Attention Message Bubble */
+                    .chatbot-attention-message {
+                        position: absolute;
+                        ${position.includes('right') ? 'right: 75px;' : 'left: 75px;'}
+                        ${position.includes('bottom') ? 'bottom: 10px;' : 'top: 10px;'}
+                        background: white;
+                        color: #333;
+                        padding: 10px 16px;
+                        border-radius: 20px;
+                        box-shadow: 0 3px 15px rgba(0, 0, 0, 0.15);
+                        font-size: 14px;
+                        white-space: nowrap;
+                        max-width: 250px;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        animation: fadeInSlide 0.5s ease;
+                        pointer-events: none;
+                    }
+                    .chatbot-attention-message::after {
+                        content: '';
+                        position: absolute;
+                        ${position.includes('right') ? 'right: -8px;' : 'left: -8px;'}
+                        ${position.includes('bottom') ? 'bottom: 15px;' : 'top: 15px;'}
+                        width: 0;
+                        height: 0;
+                        border-style: solid;
+                        border-width: ${position.includes('right') ? '8px 0 8px 8px' : '8px 8px 8px 0'};
+                        border-color: ${position.includes('right') ? 'transparent transparent transparent white' : 'transparent white transparent transparent'};
+                    }
+                    @keyframes fadeInSlide {
+                        from {
+                            opacity: 0;
+                            transform: translateX(${position.includes('right') ? '10px' : '-10px'});
+                        }
+                        to {
+                            opacity: 1;
+                            transform: translateX(0);
+                        }
+                    }
+
+                    /* Bubble Style: Modern Rounded */
+                    .chatbot-widget-button.bubble-modern {
+                        border-radius: 30px;
+                        width: 56px;
+                        height: 56px;
+                        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+                    }
+
+                    /* Bubble Style: Minimal Flat */
+                    .chatbot-widget-button.bubble-minimal {
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                        border: 2px solid rgba(255, 255, 255, 0.3);
+                    }
+                    .chatbot-widget-button.bubble-minimal:hover {
+                        transform: scale(1.05);
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    }
+
+                    /* Bubble Style: Gradient Flow */
+                    .chatbot-widget-button.bubble-gradient {
+                        background: linear-gradient(135deg, ${primaryColor} 0%, ${this.adjustColor(primaryColor, -30)} 100%);
+                        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.18);
+                        animation: gradientPulse 3s ease infinite;
+                    }
+                    @keyframes gradientPulse {
+                        0%, 100% {
+                            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.18);
+                        }
+                        50% {
+                            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+                        }
                     }
                     .chatbot-widget-window {
                         position: absolute;
@@ -383,12 +457,109 @@
                         font-size: 12px;
                         cursor: pointer;
                     }
+
+                    /* Mobile Responsive Styles */
+                    @media (max-width: 768px) {
+                        .chatbot-widget-container {
+                            ${position.includes('bottom') ? 'bottom: 10px;' : 'top: 10px;'}
+                            ${position.includes('right') ? 'right: 10px;' : 'left: 10px;'}
+                        }
+                        .chatbot-widget-button {
+                            width: 56px;
+                            height: 56px;
+                        }
+                        .chatbot-widget-button svg {
+                            width: 26px;
+                            height: 26px;
+                        }
+                        .chatbot-attention-message {
+                            max-width: 180px;
+                            font-size: 12px;
+                            padding: 8px 12px;
+                            ${position.includes('right') ? 'right: 70px;' : 'left: 70px;'}
+                        }
+                        .chatbot-widget-window {
+                            width: 100vw;
+                            height: 100vh;
+                            max-height: 100vh;
+                            ${position.includes('bottom') ? 'bottom: 0;' : 'top: 0;'}
+                            ${position.includes('right') ? 'right: 0;' : 'left: 0;'}
+                            border-radius: 0;
+                        }
+                        .chatbot-widget-messages {
+                            padding: 15px;
+                        }
+                        .chatbot-message-content {
+                            max-width: 85%;
+                            font-size: 14px;
+                        }
+                        .chatbot-widget-input {
+                            font-size: 16px; /* Prevents auto-zoom on iOS */
+                            padding: 12px;
+                        }
+                        .chatbot-widget-attachments {
+                            gap: 8px;
+                        }
+                        .chatbot-widget-attachment-btn {
+                            width: 36px;
+                            height: 36px;
+                        }
+                        .chatbot-emoji-picker {
+                            width: 280px;
+                            max-height: 300px;
+                        }
+                        .chatbot-emoji-grid {
+                            grid-template-columns: repeat(7, 1fr);
+                        }
+                    }
+
+                    /* Small Mobile (iPhone SE, etc.) */
+                    @media (max-width: 375px) {
+                        .chatbot-attention-message {
+                            max-width: 140px;
+                            font-size: 11px;
+                        }
+                        .chatbot-emoji-picker {
+                            width: 260px;
+                        }
+                        .chatbot-emoji-grid {
+                            grid-template-columns: repeat(6, 1fr);
+                        }
+                    }
+
+                    /* Landscape mobile */
+                    @media (max-width: 768px) and (orientation: landscape) {
+                        .chatbot-widget-window {
+                            height: 100vh;
+                        }
+                        .chatbot-widget-messages {
+                            padding: 10px;
+                        }
+                    }
+
+                    /* Touch-friendly button sizing */
+                    @media (hover: none) and (pointer: coarse) {
+                        .chatbot-widget-button {
+                            width: 60px;
+                            height: 60px;
+                        }
+                        .chatbot-widget-send,
+                        .chatbot-widget-attachment-btn {
+                            min-width: 44px;
+                            min-height: 44px;
+                        }
+                    }
                 </style>
             `;
 
+            // Determine bubble style class
+            const bubbleStyle = this.config.bubble_style || 'classic';
+            const bubbleClass = bubbleStyle !== 'classic' ? `bubble-${bubbleStyle}` : '';
+
             const html = `
                 <div class="chatbot-widget-container">
-                    <button class="chatbot-widget-button" id="chatbot-toggle">
+                    ${this.config.attention_message ? `<div class="chatbot-attention-message" id="chatbot-attention">${this.config.attention_message}</div>` : ''}
+                    <button class="chatbot-widget-button ${bubbleClass}" id="chatbot-toggle">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                             <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 .97 4.29L2 22l5.71-.97C9 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.38 0-2.68-.29-3.86-.8l-.28-.13-2.86.49.49-2.86-.13-.28C4.85 14.68 4.5 13.38 4.5 12c0-4.14 3.36-7.5 7.5-7.5s7.5 3.36 7.5 7.5-3.36 7.5-7.5 7.5z"/>
                         </svg>
@@ -861,16 +1032,32 @@
         toggleWidget() {
             this.isOpen = !this.isOpen;
             const window = document.getElementById('chatbot-window');
+            const attentionMessage = document.getElementById('chatbot-attention');
+
             if (this.isOpen) {
                 window.classList.add('open');
+                // Hide attention message when widget opens
+                if (attentionMessage) {
+                    attentionMessage.style.display = 'none';
+                }
             } else {
                 window.classList.remove('open');
+                // Show attention message again when widget closes (if configured)
+                if (attentionMessage && this.config.attention_message) {
+                    attentionMessage.style.display = 'block';
+                }
             }
         }
 
         closeWidget() {
             this.isOpen = false;
             document.getElementById('chatbot-window').classList.remove('open');
+
+            // Show attention message again when widget closes
+            const attentionMessage = document.getElementById('chatbot-attention');
+            if (attentionMessage && this.config.attention_message) {
+                attentionMessage.style.display = 'block';
+            }
         }
 
         async sendMessage() {
@@ -1012,6 +1199,35 @@
                 "'": '&#039;'
             };
             return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        /**
+         * Adjust color brightness for gradient effects
+         * @param {string} color - Hex color code
+         * @param {number} percent - Percentage to darken (negative) or lighten (positive)
+         * @returns {string} - Adjusted hex color
+         */
+        adjustColor(color, percent) {
+            // Remove # if present
+            color = color.replace('#', '');
+
+            // Convert to RGB
+            let r = parseInt(color.substring(0, 2), 16);
+            let g = parseInt(color.substring(2, 4), 16);
+            let b = parseInt(color.substring(4, 6), 16);
+
+            // Adjust brightness
+            r = Math.max(0, Math.min(255, r + Math.round((r * percent) / 100)));
+            g = Math.max(0, Math.min(255, g + Math.round((g * percent) / 100)));
+            b = Math.max(0, Math.min(255, b + Math.round((b * percent) / 100)));
+
+            // Convert back to hex
+            const toHex = (n) => {
+                const hex = n.toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            };
+
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
         }
     }
 
