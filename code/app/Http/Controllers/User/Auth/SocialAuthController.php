@@ -25,7 +25,38 @@ class SocialAuthController extends Controller
     public function redirectToOauth(Request $request, string $service)
     {
         $this->setConfig($service);
-        return Socialite::driver($service)->redirect();
+
+        // Get OAuth method preference (default: PKCE for security)
+        $credential = Arr::get($this->oauthCreds, $service."_oauth", []);
+        $oauthMethod = Arr::get($credential, 'oauth_method', 'pkce');
+
+        $driver = Socialite::driver($service);
+
+        // Apply PKCE if configured (more secure)
+        if ($oauthMethod === 'pkce') {
+            // For providers that support PKCE
+            try {
+                // Generate PKCE code verifier and challenge
+                $codeVerifier = $this->generateCodeVerifier();
+                $codeChallenge = $this->generateCodeChallenge($codeVerifier);
+
+                // Store code verifier in session for callback
+                session(['oauth_code_verifier' => $codeVerifier]);
+
+                // Add PKCE parameters if the provider supports setScopes
+                if (method_exists($driver, 'setScopes')) {
+                    $driver = $driver->with([
+                        'code_challenge' => $codeChallenge,
+                        'code_challenge_method' => 'S256'
+                    ]);
+                }
+            } catch (\Exception $e) {
+                // Fall back to plain OAuth if PKCE fails
+                \Log::warning("PKCE setup failed for {$service}, using plain OAuth: " . $e->getMessage());
+            }
+        }
+
+        return $driver->redirect();
     }
 
 
@@ -37,11 +68,45 @@ class SocialAuthController extends Controller
      */
     public function setConfig(string $service) :void{
 
-        $credential               = Arr::get($this->oauthCreds ,$service."_oauth",[]);
-        $credential["redirect"]   = url('login/'.$service.'/callback');
-        Arr::forget($credential, 'status');
-        Config::set('services.'.$service, $credential);
+        $credential = Arr::get($this->oauthCreds, $service."_oauth", []);
 
+        // Use custom callback URL if configured, otherwise use default
+        $callbackUrl = Arr::get($credential, 'callback_url', url('login/'.$service.'/callback'));
+        $credential["redirect"] = $callbackUrl;
+
+        // Remove settings-only fields that shouldn't be in Laravel config
+        Arr::forget($credential, ['status', 'oauth_method', 'callback_url']);
+
+        Config::set('services.'.$service, $credential);
+    }
+
+    /**
+     * Generate PKCE code verifier
+     *
+     * @return string
+     */
+    private function generateCodeVerifier(): string
+    {
+        $length = 128;
+        $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+        $verifier = '';
+
+        for ($i = 0; $i < $length; $i++) {
+            $verifier .= $characters[random_int(0, strlen($characters) - 1)];
+        }
+
+        return $verifier;
+    }
+
+    /**
+     * Generate PKCE code challenge from verifier
+     *
+     * @param string $verifier
+     * @return string
+     */
+    private function generateCodeChallenge(string $verifier): string
+    {
+        return rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
     }
 
     /**
@@ -52,23 +117,41 @@ class SocialAuthController extends Controller
      */
     public function handleOauthCallback(string $service) : \Illuminate\Http\RedirectResponse
     {
-
         $this->setConfig($service);
 
-
         try {
-            $userOauth = Socialite::driver($service)->stateless()->user();
+            $driver = Socialite::driver($service);
+
+            // Check if PKCE was used and add code_verifier if present
+            $credential = Arr::get($this->oauthCreds, $service."_oauth", []);
+            $oauthMethod = Arr::get($credential, 'oauth_method', 'pkce');
+
+            if ($oauthMethod === 'pkce' && session('oauth_code_verifier')) {
+                // Add code_verifier for PKCE flow
+                try {
+                    $driver = $driver->with([
+                        'code_verifier' => session('oauth_code_verifier')
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::warning("PKCE verification failed for {$service}: " . $e->getMessage());
+                }
+                // Clear the code verifier from session
+                session()->forget('oauth_code_verifier');
+            }
+
+            $userOauth = $driver->stateless()->user();
 
         } catch (\Exception $e) {
-            return back()->with('error',translate('Setup Your Social Credentail!! Then Try Agian'));
+            \Log::error("OAuth callback error for {$service}: " . $e->getMessage());
+            return back()->with('error', translate('Setup Your Social Credential!! Then Try Again'));
         }
 
-        $user = User::where('email',$userOauth->email)->first();
-        if(!$user){
+        $user = User::where('email', $userOauth->email)->first();
+        if (!$user) {
             $user                    = new User();
-            $user->name              = Arr::get($userOauth->user,"name", null) ;
-            $user->email             = $userOauth->email ;
-            $user->o_auth_id         = Arr::get($userOauth->user,"id", null);
+            $user->name              = Arr::get($userOauth->user, "name", null);
+            $user->email             = $userOauth->email;
+            $user->o_auth_id         = Arr::get($userOauth->user, "id", null);
             $user->email_verified_at = Carbon::now();
             $user->save();
         }
