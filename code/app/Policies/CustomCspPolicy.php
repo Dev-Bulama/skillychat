@@ -41,6 +41,7 @@ class CustomCspPolicy extends Basic
             'https://cdnjs.cloudflare.com',
             'https://unpkg.com',
             'https://fonts.googleapis.com',
+            'https://cdn.tiny.cloud',
         ]);
 
         $this->addDirective(Directive::SCRIPT, [
@@ -54,6 +55,7 @@ class CustomCspPolicy extends Basic
             'https://cdn.jsdelivr.net',
             'https://cdnjs.cloudflare.com',
             'https://unpkg.com',
+            'https://cdn.tiny.cloud',
         ]);
 
 
@@ -85,6 +87,7 @@ class CustomCspPolicy extends Basic
             "'self'",
             'https://www.gstatic.com/',
             'https://*.paypal.com',
+            'https://cdn.tiny.cloud',
         ]);
 
         $this->addDirective(Directive::OBJECT, "'none'");

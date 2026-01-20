@@ -1,7 +1,4 @@
 @extends('layouts.master')
-@push('style-include')
-    <link nonce="{{ csp_nonce() }}" rel="stylesheet" href="{{ asset('assets/global/css/summnernote.css') }}">
-@endpush
 @section('content')
 
 <div class="row g-4 mb-4">
@@ -26,7 +23,7 @@
                         <form action="{{ route('user.ticket.reply') }}" class="give-replay" method="post">
                             @csrf
                             <input hidden value="{{ $ticket->id }}" type="text" name="id">
-                            <textarea class="summernote" name="message" rows="3"
+                            <textarea class="tinymce-editor" name="message" rows="3"
                                 placeholder="{{ translate('Reply Here ....') }}"></textarea>
                             <div class="give-replay-action mt-4">
                                 <div>
@@ -216,7 +213,4 @@
 </div>
 @endsection
 
-@push('script-include')
-    <script nonce="{{ csp_nonce() }}" src="{{ asset('assets/global/js/summernote.min.js') }}"></script>
-    <script nonce="{{ csp_nonce() }}" src="{{ asset('assets/global/js/editor.init.js') }}"></script>
-@endpush
+

@@ -219,9 +219,12 @@
                                 <div class="form-inner">
                                     <label for="callbackUrl">
                                         {{translate('Callback URL')}}
+                                        <span class="text-info" data-bs-toggle="tooltip" title="{{translate('You can customize the callback URL for this platform')}}">
+                                            <i class="las la-info-circle"></i>
+                                        </span>
                                     </label>
                                     <div class="input-group">
-                                        <input id="callbackUrl"  readonly  type="text" class="form-control" >
+                                        <input id="callbackUrl" name="callback_url" type="text" class="form-control" placeholder="{{translate('Enter callback URL')}}">
                                         <span class="input-group-text pointer copy-text pointer" data-type="modal"  data-text ='' ><i class="las la-copy"></i></span>
                                     </div>
                                 </div>

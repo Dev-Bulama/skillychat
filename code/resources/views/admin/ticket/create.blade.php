@@ -1,8 +1,5 @@
 @extends('admin.layouts.master')
 
-@push('style-include')
-    <link nonce="{{ csp_nonce() }}"   rel="stylesheet" href="{{asset('assets/global/css/summnernote.css')}}">
-@endpush
 @section('content')
 
     @php
@@ -58,7 +55,7 @@
                                             </span>@endif
                                         </label>
                                         @if($ticket_field['type'] == 'textarea')
-                                        <textarea id="{{$loop->index}}" {{$ticket_field['required'] == '1' ? "required" :""}} class="summernote"  name="ticket_data[{{ $field_name }}]" cols="30" rows="10" placeholder="{{$ticket_field['placeholder']}}">{{old('ticket_data.'.$field_name)}}</textarea>
+                                        <textarea id="{{$loop->index}}" {{$ticket_field['required'] == '1' ? "required" :""}} class="tinymce-editor"  name="ticket_data[{{ $field_name }}]" cols="30" rows="10" placeholder="{{$ticket_field['placeholder']}}">{{old('ticket_data.'.$field_name)}}</textarea>
                                         @elseif($ticket_field['type'] == 'file')
                                             <input id="{{$loop->index}}"  {{$ticket_field['required'] == '1' ? "required" :""}}   multiple  type="file" name="ticket_data[{{ $field_name }}][]" >
                                         @else
@@ -98,11 +95,14 @@
    </form>
 @endsection
 
-@push('script-include')
-  <script   nonce="{{ csp_nonce() }}" src="{{asset('assets/global/js/summernote.min.js')}}"></script>
-  <script nonce="{{ csp_nonce() }}" src="{{asset('assets/global/js/editor.init.js')}}"></script>
-@endpush
 
+
+
+
+@include('partials.tinymce_editor', [
+    'selector' => '.tinymce-editor',
+    'height' => 400
+])
 
 @push('script-push')
 
@@ -121,13 +121,7 @@
         $(document).ready(function() {
 
 
-            $('.summernote').summernote({
-
-
-                height: 200
-
-
-            });
+            
 
 
         });

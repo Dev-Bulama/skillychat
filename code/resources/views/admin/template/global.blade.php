@@ -1,8 +1,5 @@
 @extends('admin.layouts.master')
 
-@push('style-include')
-<link nonce="{{ csp_nonce() }}" rel="stylesheet" href="{{asset('assets/global/css/summnernote.css')}}">
-@endpush
 
 @section('content')
 <div class="row g-4">
@@ -61,10 +58,13 @@
 </div>
 @endsection
 
-@push('script-include')
-<script nonce="{{ csp_nonce() }}" src="{{asset('assets/global/js/summernote.min.js')}}"></script>
-<script nonce="{{ csp_nonce() }}" src="{{asset('assets/global/js/editor.init.js')}}"></script>
-@endpush
+
+
+
+@include('partials.tinymce_editor', [
+    'selector' => '.tinymce-editor',
+    'height' => 400
+])
 
 @push('script-push')
 <script nonce="{{ csp_nonce() }}">
@@ -74,13 +74,7 @@
         $(document).ready(function() {
 
 
-            $('.summernote').summernote({
-
-
-                height: 300
-
-
-            });
+            
 
 
         });

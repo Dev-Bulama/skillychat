@@ -248,9 +248,19 @@ class ChatController extends Controller
         } catch (Exception $e) {
             Log::error('ChatController::uploadImage error: ' . $e->getMessage());
 
+            // Provide specific error message based on exception
+            $errorMessage = 'Failed to process image.';
+            if (str_contains($e->getMessage(), 'API key')) {
+                $errorMessage = 'Image recognition requires AI API configuration. Please contact support.';
+            } elseif (str_contains($e->getMessage(), 'vision')) {
+                $errorMessage = 'AI vision service is not available. Please try again later.';
+            } elseif (config('app.debug')) {
+                $errorMessage = $e->getMessage();
+            }
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to process image.',
+                'message' => $errorMessage,
                 'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
@@ -321,9 +331,19 @@ class ChatController extends Controller
         } catch (Exception $e) {
             Log::error('ChatController::uploadVoice error: ' . $e->getMessage());
 
+            // Provide specific error message based on exception
+            $errorMessage = 'Failed to process voice message.';
+            if (str_contains($e->getMessage(), 'API key')) {
+                $errorMessage = 'Voice transcription requires OpenAI API configuration. Please contact support.';
+            } elseif (str_contains($e->getMessage(), 'transcribe')) {
+                $errorMessage = 'Voice transcription service is not available. Please try again later.';
+            } elseif (config('app.debug')) {
+                $errorMessage = $e->getMessage();
+            }
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to process voice message.',
+                'message' => $errorMessage,
                 'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
