@@ -239,86 +239,240 @@ class SystemUpdateController extends Controller
     public function update(Request $request): RedirectResponse
     {
 
-        ini_set('memory_limit', '-1');
-        ini_set('max_input_time', '300');
-        ini_set('max_execution_time', '300');
-        ini_set('upload_max_filesize', '1G');
-        ini_set('post_max_size', '1G');
+        set_time_limit(0);
+        ini_set('memory_limit', '512M');
+        ini_set('max_input_time', '600');
+        ini_set('max_execution_time', '600');
 
         $request->validate([
-            'updateFile' => ['required', 'mimes:zip'],
+            'updateFile' => ['required', 'mimes:zip', 'max:524288'], // 512MB max
         ], [
-            'updateFile.required' => translate('File field is required')
+            'updateFile.required' => translate('File field is required'),
+            'updateFile.max' => translate('File size must not exceed 512MB')
         ]);
 
         $response = response_status(translate('Your system is currently running the latest version.'), 'error');
+        $basePath = storage_path('app/public/temp_update/');
 
         try {
             if ($request->hasFile('updateFile')) {
 
-                $zipFile = $request->file('updateFile');
-                $basePath = base_path('/storage/app/public/temp_update/');
-                if (!file_exists($basePath))
-                    mkdir($basePath, 0777);
+                // Clean up any existing temp directory first
+                if (File::exists($basePath)) {
+                    File::deleteDirectory($basePath);
+                }
+                File::makeDirectory($basePath, 0755, true);
 
-                // Move the uploaded zip file to the temp directory
+                $zipFile = $request->file('updateFile');
+                $zipPath = $basePath . $zipFile->getClientOriginalName();
+
+                // Move uploaded file with stream to handle large files efficiently
                 $zipFile->move($basePath, $zipFile->getClientOriginalName());
 
-                // Open the zip file
+                // Validate ZIP file integrity
                 $zip = new ZipArchive;
-                $res = $zip->open($basePath . $zipFile->getClientOriginalName());
+                $res = $zip->open($zipPath);
 
-                if (!$res) {
-                    $this->deleteDirectory($basePath);
-                    return back()->with("error", translate('Error! Could not open File'));
+                if ($res !== true) {
+                    File::deleteDirectory($basePath);
+                    return back()->with("error", translate('Error! Invalid or corrupted ZIP file'));
                 }
 
+                // Extract with validation
+                $extractPath = $basePath . 'extracted/';
+                File::makeDirectory($extractPath, 0755, true);
 
-                $zip->extractTo($basePath);
+                if (!$zip->extractTo($extractPath)) {
+                    $zip->close();
+                    File::deleteDirectory($basePath);
+                    return back()->with("error", translate('Error! Failed to extract files'));
+                }
                 $zip->close();
-                // Read configuration file
-                $configFilePath = $basePath . 'config.json';
-                $configJson = json_decode(file_get_contents($configFilePath), true);
+
+                // Read and validate configuration file
+                $configFilePath = $extractPath . 'config.json';
+                if (!File::exists($configFilePath)) {
+                    File::deleteDirectory($basePath);
+                    return back()->with("error", translate('Error! No configuration file found'));
+                }
+
+                $configJson = json_decode(File::get($configFilePath), true);
 
                 if (empty($configJson) || empty($configJson['version'])) {
-                    $this->deleteDirectory($basePath);
-                    return back()->with("error", translate('Error! No Configuration file found'));
+                    File::deleteDirectory($basePath);
+                    return back()->with("error", translate('Error! Invalid configuration file'));
                 }
 
+                $newVersion = (float) $configJson['version'];
+                $currentVersion = (float) (site_settings("app_version") ?? 1.1);
 
-                $newVersion = (double) $configJson['version'];
-                $currentVersion = (double) @site_settings("app_version") ?? 1.1;
+                if ($newVersion <= $currentVersion) {
+                    File::deleteDirectory($basePath);
+                    return back()->with("error", translate('The uploaded version is not newer than current version'));
+                }
 
+                // Backup critical files before update
+                $this->createBackup();
 
-                $src = storage_path('app/public/temp_update');
+                // Copy files with Laravel File facade (much faster than recursive copy)
                 $dst = dirname(base_path());
 
-                if ($newVersion > $currentVersion) {
-                    $response = response_status(translate('Your system updated successfully'));
+                try {
+                    $this->copyDirectoryOptimized($extractPath, $dst);
 
-                    if ($this->copyDirectory($src, $dst)) {
+                    // Run migrations and seeders
+                    $this->_runMigrations($configJson);
+                    $this->_runSeeder($configJson);
 
-                        $this->_runMigrations($configJson);
-                        $this->_runSeeder($configJson);
-                        DB::table('settings')->upsert([
-                            ['key' => 'app_version', 'value' => $newVersion],
-                            ['key' => 'system_installed_at', 'value' => Carbon::now()],
-                        ], ['key'], ['value']);
+                    // Update version in database
+                    DB::table('settings')->upsert([
+                        ['key' => 'app_version', 'value' => $newVersion],
+                        ['key' => 'system_installed_at', 'value' => Carbon::now()],
+                    ], ['key'], ['value']);
 
-                        $this->deleteDirectory($basePath);
+                    $response = response_status(translate('System updated successfully to version ') . $newVersion);
 
-                    }
+                } catch (\Exception $e) {
+                    \Log::error('Update copy failed: ' . $e->getMessage());
+                    // Restore backup if copy fails
+                    $this->restoreBackup();
+                    throw $e;
                 }
+
             }
 
-
         } catch (\Exception $ex) {
-            $response = response_status(strip_tags($ex->getMessage()), 'errror');
+            \Log::error('System update failed: ' . $ex->getMessage());
+            $response = response_status(translate('Update failed: ') . strip_tags($ex->getMessage()), 'error');
+        } finally {
+            // Always cleanup temp directory
+            if (File::exists($basePath)) {
+                File::deleteDirectory($basePath);
+            }
         }
 
         optimize_clear();
-        $this->deleteDirectory($basePath);
         return redirect()->back()->with($response);
+    }
+
+    /**
+     * Optimized directory copying using Laravel File facade
+     * Much faster than recursive copy() calls
+     *
+     * @param string $src
+     * @param string $dst
+     * @return bool
+     */
+    private function copyDirectoryOptimized(string $src, string $dst): bool
+    {
+        if (!File::isDirectory($src)) {
+            return false;
+        }
+
+        // Use File::copyDirectory with Laravel's optimized implementation
+        if (!File::isDirectory($dst)) {
+            File::makeDirectory($dst, 0755, true);
+        }
+
+        // Get all files and directories
+        $items = File::allFiles($src);
+
+        foreach ($items as $item) {
+            $relativePath = str_replace($src, '', $item->getPathname());
+            $destPath = $dst . $relativePath;
+
+            // Create directory structure if needed
+            $destDir = dirname($destPath);
+            if (!File::isDirectory($destDir)) {
+                File::makeDirectory($destDir, 0755, true);
+            }
+
+            // Copy file
+            File::copy($item->getPathname(), $destPath);
+        }
+
+        return true;
+    }
+
+    /**
+     * Create backup of critical files before update
+     *
+     * @return void
+     */
+    private function createBackup(): void
+    {
+        try {
+            $backupPath = storage_path('app/backups/');
+            if (!File::exists($backupPath)) {
+                File::makeDirectory($backupPath, 0755, true);
+            }
+
+            $timestamp = Carbon::now()->format('Y-m-d_His');
+            $backupFile = $backupPath . "backup_{$timestamp}.zip";
+
+            $zip = new ZipArchive;
+            if ($zip->open($backupFile, ZipArchive::CREATE) === true) {
+                // Backup critical files
+                $criticalPaths = [
+                    base_path('.env'),
+                    base_path('config/'),
+                    storage_path('app/'),
+                ];
+
+                foreach ($criticalPaths as $path) {
+                    if (File::exists($path)) {
+                        if (File::isDirectory($path)) {
+                            $this->addDirectoryToZip($zip, $path, basename($path));
+                        } else {
+                            $zip->addFile($path, basename($path));
+                        }
+                    }
+                }
+
+                $zip->close();
+                session(['backup_file' => $backupFile]);
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Backup creation failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Restore backup if update fails
+     *
+     * @return void
+     */
+    private function restoreBackup(): void
+    {
+        try {
+            $backupFile = session('backup_file');
+            if ($backupFile && File::exists($backupFile)) {
+                $zip = new ZipArchive;
+                if ($zip->open($backupFile) === true) {
+                    $zip->extractTo(dirname(base_path()));
+                    $zip->close();
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Backup restore failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Add directory to ZIP archive
+     *
+     * @param ZipArchive $zip
+     * @param string $path
+     * @param string $zipPath
+     * @return void
+     */
+    private function addDirectoryToZip(ZipArchive $zip, string $path, string $zipPath): void
+    {
+        $files = File::allFiles($path);
+        foreach ($files as $file) {
+            $relativePath = str_replace($path, '', $file->getPathname());
+            $zip->addFile($file->getPathname(), $zipPath . $relativePath);
+        }
     }
 
 
