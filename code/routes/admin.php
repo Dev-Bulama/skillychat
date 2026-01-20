@@ -25,6 +25,7 @@ use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SmsGatewayController as AdminSmsGatewayController;
 use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Admin\TemplateController;
+use App\Http\Controllers\Admin\ThemeController;
 use App\Http\Controllers\Admin\TicketController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\WithdrawController;
