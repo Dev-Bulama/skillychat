@@ -656,6 +656,16 @@ Route::middleware([
             Route::get('backup/demo' , 'backupDemo')->name('backup.demo');
         });
 
+        /** Theme Management */
+        Route::controller(ThemeController::class)->name('theme.')->prefix('theme/')->group(function () {
+            Route::get('/list', 'index')->name('index');
+            Route::post('/activate', 'activate')->name('activate');
+            Route::post('/install', 'install')->name('install');
+            Route::post('/delete', 'delete')->name('delete');
+            Route::get('/configure/{id}', 'configure')->name('configure');
+            Route::post('/configure/{id}', 'updateConfig')->name('update.config');
+        });
+
 
 
     });
