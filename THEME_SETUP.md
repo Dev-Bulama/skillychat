@@ -99,6 +99,8 @@ The manual update system has been optimized with:
 - **3x faster** file copying using Laravel File facade
 - Memory optimized (512MB instead of unlimited)
 - Streaming file operations for large uploads
+- **Real-time upload progress tracking** with visual progress bar
+- Support for files up to **256MB** (configurable)
 
 ### Safety
 - Automatic backup before update
@@ -106,11 +108,32 @@ The manual update system has been optimized with:
 - ZIP integrity validation
 - Version checking
 
+### Upload Progress Features
+- **Live progress bar** showing upload percentage
+- **File size display** (uploaded/total)
+- **Upload speed tracking**
+- **Status messages** at each stage
+- **Error handling** with automatic retry suggestions
+
 ### Usage
 1. Navigate to: `http://localhost/skillchat/admin/system/update/init`
-2. Upload your ZIP file (max 512MB)
-3. System validates, backs up, and installs
-4. Automatic rollback if anything fails
+2. Upload your ZIP file (max 256MB - can be increased in .htaccess)
+3. **Watch real-time progress** as file uploads
+4. System validates, backs up, and installs automatically
+5. Automatic rollback if anything fails
+
+### Upload Size Configuration
+The upload limits have been increased via:
+- `.htaccess` file in `/public` directory
+- `.user.ini` file as fallback for FastCGI/FPM servers
+- Default limits: 256MB upload, 512MB memory, 10 minutes timeout
+
+**To increase further**, edit `/public/.htaccess` or `/public/.user.ini`:
+```apache
+upload_max_filesize = 512M
+post_max_size = 512M
+memory_limit = 1024M
+```
 
 ---
 

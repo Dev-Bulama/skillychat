@@ -10,6 +10,83 @@
         box-sizing: border-box;
     }
 
+    /* Upload Progress Indicator */
+    .upload-progress-container {
+        display: none;
+        margin: 20px 0;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e1e8ed;
+    }
+
+    .upload-progress-container.active {
+        display: block;
+    }
+
+    .upload-progress-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        font-size: 14px;
+        color: #4a5568;
+    }
+
+    .upload-progress-bar-container {
+        width: 100%;
+        height: 30px;
+        background: #e1e8ed;
+        border-radius: 15px;
+        overflow: hidden;
+        position: relative;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .upload-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #4299e1 0%, #3182ce 100%);
+        border-radius: 15px;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 13px;
+        box-shadow: 0 2px 4px rgba(66, 153, 225, 0.4);
+    }
+
+    .upload-progress-bar.complete {
+        background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+    }
+
+    .upload-status-text {
+        margin-top: 10px;
+        text-align: center;
+        font-size: 13px;
+        color: #4a5568;
+        font-weight: 500;
+    }
+
+    .upload-status-text i {
+        margin-right: 6px;
+    }
+
+    .upload-spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(66, 153, 225, 0.3);
+        border-radius: 50%;
+        border-top-color: #4299e1;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 8px;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
     .update-container {
         background-color: #ffffff;
         border-radius: 8px;
@@ -471,7 +548,7 @@
                         <p class="version-date">{{ get_date_time(site_settings("system_installed_at", \Carbon\Carbon::now())) }}</p>
                     </div>
                     
-                    <form action="{{route('admin.system.update')}}" method="post" enctype="multipart/form-data">
+                    <form action="{{route('admin.system.update')}}" method="post" enctype="multipart/form-data" id="manual-update-form">
                         @csrf
                         <div class="mt-4 mb-4">
                             <label for="image" class="feedback-file">
@@ -479,6 +556,24 @@
                                 <span><i class="bi bi-file-zip"></i> {{translate("Upload Zip file")}}</span>
                             </label>
                         </div>
+
+                        <!-- Upload Progress Indicator -->
+                        <div class="upload-progress-container" id="upload-progress">
+                            <div class="upload-progress-info">
+                                <span id="upload-file-name">{{translate("Uploading...")}}</span>
+                                <span id="upload-percentage">0%</span>
+                            </div>
+                            <div class="upload-progress-bar-container">
+                                <div class="upload-progress-bar" id="progress-bar" style="width: 0%;">
+                                    <span id="progress-text">0%</span>
+                                </div>
+                            </div>
+                            <div class="upload-status-text" id="upload-status">
+                                <span class="upload-spinner"></span>
+                                <span id="status-message">{{translate("Preparing upload...")}}</span>
+                            </div>
+                        </div>
+
                         <button class="i-btn btn--lg btn--primary update-btn" type="submit">
                             {{translate("Update Now")}}
                         </button>
@@ -691,6 +786,129 @@
                     console.error('Update installation failed:', error);
                 }
             });
+        }
+
+        // Manual Update with Progress Tracking
+        const $manualUpdateForm = $('#manual-update-form');
+        const $updateButton = $('.update-btn');
+        const $uploadProgress = $('#upload-progress');
+        const $progressBar = $('#progress-bar');
+        const $progressText = $('#progress-text');
+        const $uploadPercentage = $('#upload-percentage');
+        const $uploadFileName = $('#upload-file-name');
+        const $statusMessage = $('#status-message');
+        const $fileInput = $('#image');
+
+        // Update file name display when file is selected
+        $fileInput.on('change', function() {
+            if (this.files.length > 0) {
+                const fileName = this.files[0].name;
+                const fileSize = formatFileSize(this.files[0].size);
+                $uploadFileName.text(fileName + ' (' + fileSize + ')');
+            }
+        });
+
+        // Handle form submission with AJAX and progress tracking
+        $manualUpdateForm.on('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const file = $fileInput[0].files[0];
+
+            if (!file) {
+                alert('{{translate("Please select a file to upload")}}');
+                return;
+            }
+
+            // Show progress container and disable button
+            $uploadProgress.addClass('active');
+            $updateButton.prop('disabled', true).text('{{translate("Uploading...")}}');
+
+            const xhr = new XMLHttpRequest();
+
+            // Track upload progress
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+
+                    $progressBar.css('width', percentComplete + '%');
+                    $progressText.text(percentComplete + '%');
+                    $uploadPercentage.text(percentComplete + '%');
+
+                    const uploadedSize = formatFileSize(e.loaded);
+                    const totalSize = formatFileSize(e.total);
+                    $statusMessage.text('{{translate("Uploading")}} ' + uploadedSize + ' / ' + totalSize);
+                }
+            });
+
+            // Handle upload completion
+            xhr.addEventListener('load', function() {
+                if (xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+
+                        if (response.success) {
+                            $progressBar.addClass('complete');
+                            $statusMessage.html('<i class="las la-check-circle"></i> {{translate("Upload complete! Processing update...")}}');
+
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 2000);
+                        } else {
+                            handleUploadError(response.message || '{{translate("Upload failed")}}');
+                        }
+                    } catch (error) {
+                        // If not JSON response, assume HTML success page
+                        $progressBar.addClass('complete');
+                        $statusMessage.html('<i class="las la-check-circle"></i> {{translate("Update complete! Redirecting...")}}');
+
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 2000);
+                    }
+                } else {
+                    handleUploadError('{{translate("Server error:")}} ' + xhr.status);
+                }
+            });
+
+            // Handle upload errors
+            xhr.addEventListener('error', function() {
+                handleUploadError('{{translate("Network error. Please check your connection and try again.")}}');
+            });
+
+            // Handle upload abort
+            xhr.addEventListener('abort', function() {
+                handleUploadError('{{translate("Upload cancelled")}}');
+            });
+
+            // Send the request
+            xhr.open('POST', '{{route("admin.system.update")}}', true);
+            xhr.setRequestHeader('X-CSRF-TOKEN', '{{ csrf_token() }}');
+            xhr.send(formData);
+        });
+
+        function handleUploadError(message) {
+            $progressBar.css('background', 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)');
+            $statusMessage.html('<i class="las la-exclamation-circle"></i> ' + message);
+            $updateButton.prop('disabled', false).text('{{translate("Update Now")}}');
+
+            setTimeout(function() {
+                $uploadProgress.removeClass('active');
+                $progressBar.css({
+                    'width': '0%',
+                    'background': 'linear-gradient(90deg, #4299e1 0%, #3182ce 100%)'
+                });
+                $progressText.text('0%');
+                $uploadPercentage.text('0%');
+            }, 5000);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
         }
     });
 
