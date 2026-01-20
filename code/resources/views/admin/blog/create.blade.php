@@ -1,7 +1,4 @@
 @extends('admin.layouts.master')
-@push('style-include')
-<link nonce="{{ csp_nonce() }}" rel="stylesheet" href="{{asset('assets/global/css/summnernote.css')}}">
-@endpush
 @section('content')
 <form action="{{route('admin.blog.store')}}" class="add-listing-form" enctype="multipart/form-data" method="post">
     @csrf
@@ -39,7 +36,7 @@
                                 <label for="description">
                                     {{translate('Description')}} <small class="text-danger">*</small>
                                 </label>
-                                <textarea class="summernote" name="description" id="description" cols="30" rows="5">{{old("description")}}</textarea>
+                                <textarea class="tinymce-editor" name="description" id="description" cols="30" rows="5">{{old("description")}}</textarea>
                             </div>
                         </div>
                         <div class="col-lg-12">
@@ -66,11 +63,14 @@
     </div>
 </form>
 @endsection
-@push('script-include')
-<script nonce="{{ csp_nonce() }}" src="{{asset('assets/global/js/summernote.min.js')}}"></script>
-<script nonce="{{ csp_nonce() }}" src="{{asset('assets/global/js/editor.init.js')}}"></script>
-@endpush
 
+
+
+
+@include('partials.tinymce_editor', [
+    'selector' => '.tinymce-editor',
+    'height' => 400
+])
 
 @push('script-push')
 <script nonce="{{ csp_nonce() }}">
@@ -89,13 +89,7 @@
         $(document).ready(function() {
 
 
-            $('.summernote').summernote({
-
-
-                height: 300
-
-
-            });
+            
 
 
         });

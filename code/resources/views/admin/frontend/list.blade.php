@@ -1,6 +1,5 @@
 @extends('admin.layouts.master')
 @push('style-include')
-<link nonce="{{ csp_nonce() }}" rel="stylesheet" href="{{asset('assets/global/css/summnernote.css')}}">
 <link nonce="{{ csp_nonce() }}" rel="stylesheet" href="{{asset('assets/global/css/bootstrapicons-iconpicker.css')}}">
 @endpush
 @section('content')
@@ -87,7 +86,7 @@
                                     {{translate(k2t($k))}} <small class="text-danger">*</small>
                                 </label>
                                 @if($content == 'textarea' || $content == 'textarea-editor')
-                                <textarea placeholder="{{translate(k2t($k))}}" @if($content=='textarea-editor' ) class="summernote" @endif name="{{$k}}" id="{{$k}}" cols="30" rows="10"></textarea>
+                                <textarea placeholder="{{translate(k2t($k))}}" @if($content=='textarea-editor' ) class="tinymce-editor" @endif name="{{$k}}" id="{{$k}}" cols="30" rows="10"></textarea>
                                 @else
                                 <input value="" placeholder="{{translate(k2t($k))}}" @if($content=='icon' ) class="icon-picker icon" autocomplete="off" @endif type='{{$content == "number" ? "number" :"text"}}' name="{{$k}}" id="{{$k}}">
                                 @endif
@@ -115,11 +114,15 @@
 
 @push('script-include')
 
-<script nonce="{{ csp_nonce() }}" src="{{asset('assets/global/js/summernote.min.js')}}"></script>
-<script nonce="{{ csp_nonce() }}" src="{{asset('assets/global/js/editor.init.js')}}"></script>
 <script nonce="{{ csp_nonce() }}" src="{{asset('assets/global/js/bootstrapicon-iconpicker.js')}}"></script>
 
 @endpush
+
+
+@include('partials.tinymce_editor', [
+    'selector' => '.tinymce-editor',
+    'height' => 400
+])
 
 @push('script-push')
 <script nonce="{{ csp_nonce() }}">
@@ -131,9 +134,7 @@
         , })
 
         $(document).ready(function() {
-            $('.summernote').summernote({
-                height: 300
-            });
+            
         });
 
         $(document).on('click', '.create', function(e) {

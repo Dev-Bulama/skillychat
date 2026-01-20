@@ -1,8 +1,5 @@
 @extends('admin.layouts.master')
 
-@push('style-include')
-<link nonce="{{ csp_nonce() }}" rel="stylesheet" href="{{asset('assets/global/css/summnernote.css')}}">
-@endpush
 @section('content')
 <form action="{{route('admin.page.store')}}" class="add-listing-form" enctype="multipart/form-data" method="post">
     @csrf
@@ -43,7 +40,7 @@
                                     {{translate('Description')}}
                                     <span class="text-danger">*</span>
                                 </label>
-                                <textarea id="description" class="summernote" name="description" cols="30" rows="10">{{old("description")}}</textarea>
+                                <textarea id="description" class="tinymce-editor" name="description" cols="30" rows="10">{{old("description")}}</textarea>
                             </div>
                         </div>
                         <div class="col-12">
@@ -68,11 +65,10 @@
 </form>
 @endsection
 
-@push('script-include')
-<script nonce="{{ csp_nonce() }}" src="{{asset('assets/global/js/summernote.min.js')}}"></script>
-<script nonce="{{ csp_nonce() }}" src="{{asset('assets/global/js/editor.init.js')}}"></script>
-@endpush
-
+@include('partials.tinymce_editor', [
+    'selector' => '.tinymce-editor',
+    'height' => 400
+])
 
 @push('script-push')
 <script nonce="{{ csp_nonce() }}">
@@ -83,51 +79,6 @@
             tags: true,
             tokenSeparators: [',']
         })
-
-        $(document).ready(function() {
-            $('.summernote').summernote({
-                height: 400,
-                codemirror: {
-                    theme: 'monokai'
-                },
-                toolbar: [
-                    ['style', ['style']],
-                    ['font', ['bold', 'underline', 'clear']],
-                    ['fontname', ['fontname']],
-                    ['color', ['color']],
-                    ['para', ['ul', 'ol', 'paragraph']],
-                    ['table', ['table']],
-                    ['insert', ['link', 'picture', 'video']],
-                    ['view', ['fullscreen', 'codeview', 'help']]
-                ],
-                codeviewFilter: false,
-                codeviewIframeFilter: true,
-                disableDragAndDrop: false,
-                dialogsInBody: true,
-                styleTags: ['p', 'blockquote', 'pre', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-                popover: {
-                    image: [
-                        ['image', ['resizeFull', 'resizeHalf', 'resizeQuarter', 'resizeNone']],
-                        ['float', ['floatLeft', 'floatRight', 'floatNone']],
-                        ['remove', ['removeMedia']]
-                    ],
-                    link: [
-                        ['link', ['linkDialogShow', 'unlink']]
-                    ],
-                    table: [
-                        ['add', ['addRowDown', 'addRowUp', 'addColLeft', 'addColRight']],
-                        ['delete', ['deleteRow', 'deleteCol', 'deleteTable']],
-                    ],
-                    air: [
-                        ['color', ['color']],
-                        ['font', ['bold', 'underline', 'clear']],
-                        ['para', ['ul', 'paragraph']],
-                        ['table', ['table']],
-                        ['insert', ['link', 'picture']]
-                    ]
-                }
-            });
-        });
     })(jQuery);
 </script>
 @endpush

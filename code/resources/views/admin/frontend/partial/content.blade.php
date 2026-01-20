@@ -66,7 +66,7 @@
                             {{translate(k2t($k))}} <small class="text-danger">*</small>
                         </label>
                         @if($content == 'textarea' || $content == 'textarea-editor')
-                            <textarea placeholder="{{translate(k2t($k))}}" required @if($content == 'textarea-editor') class="summernote"  @endif name="{{$k}}" id="save-{{$k}}" cols="30" rows="10">{{ $appearance_content?->value?->$k }}</textarea>
+                            <textarea placeholder="{{translate(k2t($k))}}" required @if($content == 'textarea-editor') class="tinymce-editor"  @endif name="{{$k}}" id="save-{{$k}}" cols="30" rows="10">{{ $appearance_content?->value?->$k }}</textarea>
                         @else
                             <input value="{{@$appearance_content->value->$k}}" placeholder="{{translate(k2t($k))}}" @if($content  == 'icon' ) class="icon-picker icon"
                          @endif type='{{$content == "number" ? "number" :"text"}}' name="{{$k}}" id="save-{{$k}}">

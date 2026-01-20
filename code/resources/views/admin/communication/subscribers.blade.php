@@ -1,7 +1,4 @@
 @extends('admin.layouts.master')
-@push('style-include')
-  <link nonce="{{ csp_nonce() }}" rel="stylesheet" href="{{asset('assets/global/css/summnernote.css')}}">
-@endpush
 @section('content')
     <div class="i-card-md">
         <div class="card-body">
@@ -142,7 +139,7 @@
                                         {{translate('Message')}}
                                             <small class="text-danger">*</small>
                                     </label>
-                                    <textarea class="summernote" required placeholder="{{translate('Type Here')}}" name="message" id="message" cols="30" rows="5">{{old("message")}}</textarea>
+                                    <textarea class="tinymce-editor" required placeholder="{{translate('Type Here')}}" name="message" id="message" cols="30" rows="5">{{old("message")}}</textarea>
                                 </div>
                             </div>
                         </div>
@@ -181,7 +178,7 @@
                                         {{translate('Message')}}
                                             <small class="text-danger">*</small>
                                     </label>
-                                    <textarea class="summernote" required placeholder="{{translate('Type Here')}}" name="message" id="message-all" cols="30" rows="5">{{old("message")}}</textarea>
+                                    <textarea class="tinymce-editor" required placeholder="{{translate('Type Here')}}" name="message" id="message-all" cols="30" rows="5">{{old("message")}}</textarea>
                                 </div>
                             </div>
                         </div>
@@ -200,10 +197,13 @@
     </div>
 @endsection
 
-@push('script-include')
-    <script nonce="{{ csp_nonce() }}" src="{{asset('assets/global/js/summernote.min.js')}}"></script>
-    <script nonce="{{ csp_nonce() }}" src="{{asset('assets/global/js/editor.init.js')}}"></script>
-@endpush
+
+
+
+@include('partials.tinymce_editor', [
+    'selector' => '.tinymce-editor',
+    'height' => 400
+])
 
 @push('script-push')
 <script nonce="{{ csp_nonce() }}">
@@ -221,13 +221,7 @@
         $(document).ready(function() {
 
 
-            $('.summernote').summernote({
-
-
-                height: 200
-
-
-            });
+            
 
 
         });
