@@ -849,28 +849,53 @@
 
             // Handle upload completion
             xhr.addEventListener('load', function() {
+                console.log('Upload completed. Status:', xhr.status);
+                console.log('Response:', xhr.responseText);
+
                 if (xhr.status === 200) {
                     try {
                         const response = JSON.parse(xhr.responseText);
+                        console.log('Parsed response:', response);
 
                         if (response.success) {
                             $progressBar.addClass('complete');
-                            $statusMessage.html('<i class="las la-check-circle"></i> {{translate("Upload complete! Processing update...")}}');
+                            $statusMessage.html('<i class="las la-check-circle"></i> ' + (response.message || '{{translate("Upload complete! Processing update...")}}'));
 
                             setTimeout(function() {
                                 window.location.reload();
                             }, 2000);
                         } else {
-                            handleUploadError(response.message || '{{translate("Upload failed")}}');
+                            const errorMsg = response.message || '{{translate("Upload failed")}}';
+                            console.error('Update failed:', errorMsg);
+                            handleUploadError(errorMsg);
                         }
                     } catch (error) {
-                        // If not JSON response, assume HTML success page
-                        $progressBar.addClass('complete');
-                        $statusMessage.html('<i class="las la-check-circle"></i> {{translate("Update complete! Redirecting...")}}');
+                        console.error('JSON parse error:', error);
+                        console.log('Response text:', xhr.responseText.substring(0, 500));
 
-                        setTimeout(function() {
-                            window.location.reload();
-                        }, 2000);
+                        // Check if response contains error indicators
+                        if (xhr.responseText.includes('error') || xhr.responseText.includes('Error')) {
+                            handleUploadError('{{translate("Update failed. Check server logs for details.")}}');
+                        } else {
+                            // If not JSON response, assume HTML success page
+                            $progressBar.addClass('complete');
+                            $statusMessage.html('<i class="las la-check-circle"></i> {{translate("Update complete! Redirecting...")}}');
+
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 2000);
+                        }
+                    }
+                } else if (xhr.status === 413) {
+                    handleUploadError('{{translate("File too large. Server rejected the upload.")}}');
+                } else if (xhr.status === 422) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        const errors = response.errors || {};
+                        const errorMsg = Object.values(errors).flat().join(', ') || response.message || '{{translate("Validation failed")}}';
+                        handleUploadError(errorMsg);
+                    } catch (e) {
+                        handleUploadError('{{translate("Validation failed")}}');
                     }
                 } else {
                     handleUploadError('{{translate("Server error:")}} ' + xhr.status);

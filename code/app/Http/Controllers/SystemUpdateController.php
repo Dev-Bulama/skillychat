@@ -234,9 +234,9 @@ class SystemUpdateController extends Controller
      * update the system
      *
      * @param Request $request
-     * @return RedirectResponse
+     * @return RedirectResponse|\Illuminate\Http\JsonResponse
      */
-    public function update(Request $request): RedirectResponse
+    public function update(Request $request)
     {
 
         set_time_limit(0);
@@ -255,21 +255,46 @@ class SystemUpdateController extends Controller
 
         $response = response_status(translate('Your system is currently running the latest version.'), 'error');
         $basePath = storage_path('app/public/temp_update/');
+        $errorMessage = '';
+        $successMessage = '';
 
         try {
             if ($request->hasFile('updateFile')) {
 
                 // Clean up any existing temp directory first
                 if (File::exists($basePath)) {
-                    File::deleteDirectory($basePath);
+                    try {
+                        File::deleteDirectory($basePath);
+                    } catch (\Exception $e) {
+                        \Log::warning('Failed to delete existing temp directory: ' . $e->getMessage());
+                    }
                 }
-                File::makeDirectory($basePath, 0755, true);
+
+                // Create temp directory with full permissions
+                if (!File::makeDirectory($basePath, 0777, true, true)) {
+                    $errorMessage = translate('Error! Failed to create temporary directory. Check storage permissions.');
+                    \Log::error('Failed to create temp directory: ' . $basePath);
+                    if ($request->expectsJson() || $request->ajax()) {
+                        return response()->json(['success' => false, 'message' => $errorMessage]);
+                    }
+                    return back()->with("error", $errorMessage);
+                }
 
                 $zipFile = $request->file('updateFile');
                 $zipPath = $basePath . $zipFile->getClientOriginalName();
 
                 // Move uploaded file with stream to handle large files efficiently
-                $zipFile->move($basePath, $zipFile->getClientOriginalName());
+                try {
+                    $zipFile->move($basePath, $zipFile->getClientOriginalName());
+                } catch (\Exception $e) {
+                    \Log::error('File move failed: ' . $e->getMessage());
+                    File::deleteDirectory($basePath);
+                    $errorMessage = translate('Error! Failed to save uploaded file: ') . $e->getMessage();
+                    if ($request->expectsJson() || $request->ajax()) {
+                        return response()->json(['success' => false, 'message' => $errorMessage]);
+                    }
+                    return back()->with("error", $errorMessage);
+                }
 
                 // Validate ZIP file integrity
                 $zip = new ZipArchive;
@@ -277,7 +302,11 @@ class SystemUpdateController extends Controller
 
                 if ($res !== true) {
                     File::deleteDirectory($basePath);
-                    return back()->with("error", translate('Error! Invalid or corrupted ZIP file'));
+                    $errorMessage = translate('Error! Invalid or corrupted ZIP file');
+                    if ($request->expectsJson() || $request->ajax()) {
+                        return response()->json(['success' => false, 'message' => $errorMessage]);
+                    }
+                    return back()->with("error", $errorMessage);
                 }
 
                 // Extract with validation
@@ -287,7 +316,11 @@ class SystemUpdateController extends Controller
                 if (!$zip->extractTo($extractPath)) {
                     $zip->close();
                     File::deleteDirectory($basePath);
-                    return back()->with("error", translate('Error! Failed to extract files'));
+                    $errorMessage = translate('Error! Failed to extract files');
+                    if ($request->expectsJson() || $request->ajax()) {
+                        return response()->json(['success' => false, 'message' => $errorMessage]);
+                    }
+                    return back()->with("error", $errorMessage);
                 }
                 $zip->close();
 
@@ -295,14 +328,22 @@ class SystemUpdateController extends Controller
                 $configFilePath = $extractPath . 'config.json';
                 if (!File::exists($configFilePath)) {
                     File::deleteDirectory($basePath);
-                    return back()->with("error", translate('Error! No configuration file found'));
+                    $errorMessage = translate('Error! No configuration file found');
+                    if ($request->expectsJson() || $request->ajax()) {
+                        return response()->json(['success' => false, 'message' => $errorMessage]);
+                    }
+                    return back()->with("error", $errorMessage);
                 }
 
                 $configJson = json_decode(File::get($configFilePath), true);
 
                 if (empty($configJson) || empty($configJson['version'])) {
                     File::deleteDirectory($basePath);
-                    return back()->with("error", translate('Error! Invalid configuration file'));
+                    $errorMessage = translate('Error! Invalid configuration file');
+                    if ($request->expectsJson() || $request->ajax()) {
+                        return response()->json(['success' => false, 'message' => $errorMessage]);
+                    }
+                    return back()->with("error", $errorMessage);
                 }
 
                 $newVersion = (float) $configJson['version'];
@@ -310,7 +351,11 @@ class SystemUpdateController extends Controller
 
                 if ($newVersion <= $currentVersion) {
                     File::deleteDirectory($basePath);
-                    return back()->with("error", translate('The uploaded version is not newer than current version'));
+                    $errorMessage = translate('The uploaded version is not newer than current version');
+                    if ($request->expectsJson() || $request->ajax()) {
+                        return response()->json(['success' => false, 'message' => $errorMessage]);
+                    }
+                    return back()->with("error", $errorMessage);
                 }
 
                 // Backup critical files before update
@@ -332,7 +377,8 @@ class SystemUpdateController extends Controller
                         ['key' => 'system_installed_at', 'value' => Carbon::now()],
                     ], ['key'], ['value']);
 
-                    $response = response_status(translate('System updated successfully to version ') . $newVersion);
+                    $successMessage = translate('System updated successfully to version ') . $newVersion;
+                    $response = response_status($successMessage);
 
                 } catch (\Exception $e) {
                     \Log::error('Update copy failed: ' . $e->getMessage());
@@ -345,7 +391,8 @@ class SystemUpdateController extends Controller
 
         } catch (\Exception $ex) {
             \Log::error('System update failed: ' . $ex->getMessage());
-            $response = response_status(translate('Update failed: ') . strip_tags($ex->getMessage()), 'error');
+            $errorMessage = translate('Update failed: ') . strip_tags($ex->getMessage());
+            $response = response_status($errorMessage, 'error');
         } finally {
             // Always cleanup temp directory
             if (File::exists($basePath)) {
@@ -354,6 +401,15 @@ class SystemUpdateController extends Controller
         }
 
         optimize_clear();
+
+        // Return JSON for AJAX requests
+        if ($request->expectsJson() || $request->ajax()) {
+            if ($errorMessage) {
+                return response()->json(['success' => false, 'message' => $errorMessage]);
+            }
+            return response()->json(['success' => true, 'message' => $successMessage ?: translate('Update completed successfully')]);
+        }
+
         return redirect()->back()->with($response);
     }
 
