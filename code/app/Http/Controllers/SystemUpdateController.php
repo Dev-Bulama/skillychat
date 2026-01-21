@@ -240,15 +240,17 @@ class SystemUpdateController extends Controller
     {
 
         set_time_limit(0);
-        ini_set('memory_limit', '512M');
-        ini_set('max_input_time', '600');
-        ini_set('max_execution_time', '600');
+        ini_set('memory_limit', '2048M');
+        ini_set('max_input_time', '3600');
+        ini_set('max_execution_time', '3600');
+        ini_set('post_max_size', '2048M');
+        ini_set('upload_max_filesize', '2048M');
 
         $request->validate([
-            'updateFile' => ['required', 'mimes:zip', 'max:524288'], // 512MB max
+            'updateFile' => ['required', 'mimes:zip', 'max:2097152'], // 2GB max (2097152 KB)
         ], [
             'updateFile.required' => translate('File field is required'),
-            'updateFile.max' => translate('File size must not exceed 512MB')
+            'updateFile.max' => translate('File size must not exceed 2GB')
         ]);
 
         $response = response_status(translate('Your system is currently running the latest version.'), 'error');

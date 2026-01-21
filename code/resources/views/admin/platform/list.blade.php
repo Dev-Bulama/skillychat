@@ -124,10 +124,11 @@
                                                @endif
 
                                                  @php
-                                                     $url = url('/account/' . $platform->slug . '/callback' . ($platform->slug === 'tiktok' ? '' : '?medium=' . $platform->slug));
+                                                     $defaultUrl = url('/account/' . $platform->slug . '/callback' . ($platform->slug === 'tiktok' ? '' : '?medium=' . $platform->slug));
+                                                     $callbackUrl = !empty($platform->url) ? $platform->url : $defaultUrl;
                                                  @endphp
 
-                                                <a  data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{translate('Configuration')}}" data-callback="{{$url}}" href="javascript:void(0);" data-id="{{$platform->id}}"  data-config = "{{collect($platform->configuration)}}" class="update-config fs-15 icon-btn danger"><i class="las la-tools"></i>
+                                                <a  data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{translate('Configuration')}}" data-callback="{{$callbackUrl}}" href="javascript:void(0);" data-id="{{$platform->id}}"  data-config = "{{collect($platform->configuration)}}" class="update-config fs-15 icon-btn danger"><i class="las la-tools"></i>
                                                 </a>
                                                 <a  data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{translate('Update')}}"   href="javascript:void(0);" data-img ='{{imageURL(@$platform->file,"platform",true)}}'   data-platform = "{{$platform}}" class="update fs-15 icon-btn info"><i class="las la-pen"></i>
                                                 </a>
@@ -224,7 +225,7 @@
                                         </span>
                                     </label>
                                     <div class="input-group">
-                                        <input id="callbackUrl" name="callback_url" type="text" class="form-control" placeholder="{{translate('Enter callback URL')}}">
+                                        <input id="callbackUrl" name="url" type="text" class="form-control" placeholder="{{translate('Enter callback URL')}}">
                                         <span class="input-group-text pointer copy-text pointer" data-type="modal"  data-text ='' ><i class="las la-copy"></i></span>
                                     </div>
                                 </div>

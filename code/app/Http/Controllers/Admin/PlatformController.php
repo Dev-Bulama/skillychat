@@ -61,10 +61,17 @@ class PlatformController extends Controller
             "id"                            => ['required','exists:media_platforms,id'],
             "configuration"                 => ["required",'array'],
             "configuration.*"               => ["required","max:255"],
+            "url"                           => ["nullable","max:500"],
         ]);
 
         $platform                      = MediaPlatform::findOrfail($request->input('id'));
         $platform->configuration       = $request->input("configuration");
+
+        // Update URL if provided
+        if($request->has('url')){
+            $platform->url             = $request->input("url");
+        }
+
         $platform->save();
 
 

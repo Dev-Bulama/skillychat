@@ -44,6 +44,7 @@
 
     .upload-progress-bar {
         height: 100%;
+        width: var(--progress-width, 0%);
         background: linear-gradient(90deg, #4299e1 0%, #3182ce 100%);
         border-radius: 15px;
         transition: width 0.3s ease;
@@ -58,6 +59,10 @@
 
     .upload-progress-bar.complete {
         background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+    }
+
+    .upload-progress-bar.error {
+        background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
     }
 
     .upload-status-text {
@@ -564,7 +569,7 @@
                                 <span id="upload-percentage">0%</span>
                             </div>
                             <div class="upload-progress-bar-container">
-                                <div class="upload-progress-bar" id="progress-bar" style="width: 0%;">
+                                <div class="upload-progress-bar" id="progress-bar">
                                     <span id="progress-text">0%</span>
                                 </div>
                             </div>
@@ -831,7 +836,8 @@
                 if (e.lengthComputable) {
                     const percentComplete = Math.round((e.loaded / e.total) * 100);
 
-                    $progressBar.css('width', percentComplete + '%');
+                    // Use CSS custom property instead of inline style for CSP compliance
+                    $progressBar[0].style.setProperty('--progress-width', percentComplete + '%');
                     $progressText.text(percentComplete + '%');
                     $uploadPercentage.text(percentComplete + '%');
 
@@ -888,16 +894,14 @@
         });
 
         function handleUploadError(message) {
-            $progressBar.css('background', 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)');
+            $progressBar.addClass('error');
             $statusMessage.html('<i class="las la-exclamation-circle"></i> ' + message);
             $updateButton.prop('disabled', false).text('{{translate("Update Now")}}');
 
             setTimeout(function() {
                 $uploadProgress.removeClass('active');
-                $progressBar.css({
-                    'width': '0%',
-                    'background': 'linear-gradient(90deg, #4299e1 0%, #3182ce 100%)'
-                });
+                $progressBar.removeClass('error');
+                $progressBar[0].style.setProperty('--progress-width', '0%');
                 $progressText.text('0%');
                 $uploadPercentage.text('0%');
             }, 5000);
