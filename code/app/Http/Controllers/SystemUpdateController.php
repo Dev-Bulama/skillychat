@@ -346,6 +346,23 @@ class SystemUpdateController extends Controller
                     return back()->with("error", $errorMessage);
                 }
 
+                // Check if update ZIP contains .env file and remove it to prevent overwriting
+                $envFileInZip = $extractPath . '.env';
+                if (File::exists($envFileInZip)) {
+                    \Log::warning('Update ZIP contains .env file. Removing to prevent overwriting production credentials.');
+                    File::delete($envFileInZip);
+                }
+
+                // Also check for other sensitive config files
+                $sensitiveFiles = ['.env', '.env.example', 'public/.htaccess', 'public/.user.ini'];
+                foreach ($sensitiveFiles as $sensitiveFile) {
+                    $filePath = $extractPath . $sensitiveFile;
+                    if (File::exists($filePath) && $sensitiveFile !== '.env.example') {
+                        \Log::warning("Removing sensitive file from update ZIP: {$sensitiveFile}");
+                        File::delete($filePath);
+                    }
+                }
+
                 $newVersion = (float) $configJson['version'];
                 $currentVersion = (float) (site_settings("app_version") ?? 1.1);
 
@@ -365,7 +382,22 @@ class SystemUpdateController extends Controller
                 $dst = dirname(base_path());
 
                 try {
+                    // Copy files (excluding protected files like .env)
                     $this->copyDirectoryOptimized($extractPath, $dst);
+
+                    // Verify database connection is still working after file copy
+                    try {
+                        DB::connection()->getPdo();
+                    } catch (\Exception $dbError) {
+                        \Log::error('Database connection lost after update: ' . $dbError->getMessage());
+                        $this->restoreBackup();
+                        File::deleteDirectory($basePath);
+                        $errorMessage = translate('Database connection lost during update. Your .env file may have been overwritten. Backup has been restored.');
+                        if ($request->expectsJson() || $request->ajax()) {
+                            return response()->json(['success' => false, 'message' => $errorMessage]);
+                        }
+                        return back()->with("error", $errorMessage);
+                    }
 
                     // Run migrations and seeders
                     $this->_runMigrations($configJson);
@@ -377,11 +409,16 @@ class SystemUpdateController extends Controller
                         ['key' => 'system_installed_at', 'value' => Carbon::now()],
                     ], ['key'], ['value']);
 
+                    // Clear caches to ensure new code is loaded
+                    optimize_clear();
+
                     $successMessage = translate('System updated successfully to version ') . $newVersion;
                     $response = response_status($successMessage);
 
                 } catch (\Exception $e) {
-                    \Log::error('Update copy failed: ' . $e->getMessage());
+                    \Log::error('Update process failed: ' . $e->getMessage());
+                    \Log::error('Stack trace: ' . $e->getTraceAsString());
+
                     // Restore backup if copy fails
                     $this->restoreBackup();
                     throw $e;
@@ -416,6 +453,7 @@ class SystemUpdateController extends Controller
     /**
      * Optimized directory copying using Laravel File facade
      * Much faster than recursive copy() calls
+     * Excludes critical files that should never be overwritten
      *
      * @param string $src
      * @param string $dst
@@ -432,12 +470,47 @@ class SystemUpdateController extends Controller
             File::makeDirectory($dst, 0755, true);
         }
 
+        // Files and directories to NEVER overwrite during updates
+        $excludedPaths = [
+            '.env',                    // Database credentials and app config
+            'storage/framework/cache', // Cache files
+            'storage/logs',            // Log files
+            'storage/app/public',      // User uploads
+            'public/.htaccess',        // Upload size limits config
+            'public/.user.ini',        // PHP config for uploads
+            'public/storage',          // Symlink to storage
+            '.git',                    // Git repository
+            '.gitignore',              // Git ignore file
+            'node_modules',            // Node dependencies
+        ];
+
         // Get all files and directories
         $items = File::allFiles($src);
+        $copiedCount = 0;
+        $skippedCount = 0;
 
         foreach ($items as $item) {
             $relativePath = str_replace($src, '', $item->getPathname());
             $destPath = $dst . $relativePath;
+
+            // Check if this file should be excluded
+            $shouldExclude = false;
+            foreach ($excludedPaths as $excludedPath) {
+                // Normalize paths for comparison
+                $normalizedRelative = ltrim(str_replace('\\', '/', $relativePath), '/');
+                $normalizedExcluded = ltrim(str_replace('\\', '/', $excludedPath), '/');
+
+                if (str_starts_with($normalizedRelative, $normalizedExcluded)) {
+                    $shouldExclude = true;
+                    \Log::info("Skipping protected file during update: {$normalizedRelative}");
+                    $skippedCount++;
+                    break;
+                }
+            }
+
+            if ($shouldExclude) {
+                continue;
+            }
 
             // Create directory structure if needed
             $destDir = dirname($destPath);
@@ -446,8 +519,15 @@ class SystemUpdateController extends Controller
             }
 
             // Copy file
-            File::copy($item->getPathname(), $destPath);
+            try {
+                File::copy($item->getPathname(), $destPath);
+                $copiedCount++;
+            } catch (\Exception $e) {
+                \Log::warning("Failed to copy file {$relativePath}: " . $e->getMessage());
+            }
         }
+
+        \Log::info("Update file copy completed: {$copiedCount} files copied, {$skippedCount} files skipped (protected)");
 
         return true;
     }
