@@ -19,8 +19,12 @@
 
                     @forelse ($platforms as $platform)
                         @if($platform->status == App\Enums\StatusEnum::true->status()  && $platform->is_integrated == App\Enums\StatusEnum::true->status() )
+                            @php
+                                $defaultUrl = url('/account/' . $platform->slug . '/callback' . ($platform->slug === 'tiktok' ? '' : '?medium=' . $platform->slug));
+                                $callbackUrl = !empty($platform->url) ? $platform->url : $defaultUrl;
+                            @endphp
                             <li class="d-flex nav-item justify-content-between align-items-center flex-row-reverse gap-md-2 gap-1">
-                                <a data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{translate('Configuration')}}"  data-callback="{{ url('/account/' . $platform->slug . '/callback' . ($platform->slug === 'tiktok' ? '' : '?medium=' . $platform->slug)) }}" href="javascript:void(0);" data-id="{{$platform->id}}"  data-config = "{{collect($platform->configuration)}}" class="update-config fs-15 icon-btn warning"><i class="las la-tools"></i>
+                                <a data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{translate('Configuration')}}"  data-callback="{{$callbackUrl}}" href="javascript:void(0);" data-id="{{$platform->id}}"  data-config = "{{collect($platform->configuration)}}" class="update-config fs-15 icon-btn warning"><i class="las la-tools"></i>
                                 </a>
 
                                 <a data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="{{translate('Add Account')}}"  href="{{route('admin.social.account.create',['platform' => $platform->slug])}}" class="fs-15 icon-btn info"><i class="las la-plus"></i>
@@ -313,9 +317,12 @@
                                 <div class="form-inner">
                                     <label for="callbackUrl">
                                         {{translate('Callback URL')}}
+                                        <span class="text-info" data-bs-toggle="tooltip" title="{{translate('You can customize the callback URL for this platform')}}">
+                                            <i class="las la-info-circle"></i>
+                                        </span>
                                     </label>
                                     <div class="input-group">
-                                        <input id="callbackUrl"  readonly  type="text" class="form-control" >
+                                        <input id="callbackUrl" name="url" type="text" class="form-control" placeholder="{{translate('Enter callback URL')}}">
 
                                         <span class="input-group-text pointer copy-text pointer" data-type="modal"
                                         data-text ='' >
