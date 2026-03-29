@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AiTemplateController;
 use App\Http\Controllers\Admin\Auth\LoginController;
+use App\Http\Controllers\Admin\FeatureFlagController;
 use App\Http\Controllers\Admin\Auth\NewPasswordController;
 use App\Http\Controllers\Admin\CannedContentController;
 use App\Http\Controllers\Admin\CannedVideoContentController;
@@ -665,6 +666,13 @@ Route::middleware([
             Route::post('/delete', 'delete')->name('delete');
             Route::get('/configure/{id}', 'configure')->name('configure');
             Route::post('/configure/{id}', 'updateConfig')->name('update.config');
+        });
+
+        /** Feature Flags */
+        Route::controller(FeatureFlagController::class)->name('feature-flags.')->prefix('feature-flags/')->group(function () {
+            Route::get('/',            'index')->name('index');
+            Route::post('/toggle',     'toggle')->name('toggle');
+            Route::post('/{id}/update','update')->name('update');
         });
 
 

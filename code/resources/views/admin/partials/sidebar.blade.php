@@ -924,6 +924,15 @@
 
 
             @if (check_permission('view_settings'))
+            <li class="sidebar-menu-item">
+                <a class='sidebar-menu-link {{ sidebar_awake('admin.feature-flags.*') }}' href='{{ route('admin.feature-flags.index') }}'>
+                    <span><i class="las la-toggle-on"></i></span>
+                    <p>{{ translate('Feature Flags') }}</p>
+                </a>
+            </li>
+            @endif
+
+            @if (check_permission('view_settings'))
             <li class="sidebar-menu-title">
                 {{ translate('Server Info') }}
             </li>

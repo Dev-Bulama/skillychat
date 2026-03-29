@@ -41,6 +41,12 @@ class Chatbot extends Model
         'avg_response_time',
         'satisfaction_rating',
         'last_active_at',
+        // n8n automation
+        'n8n_enabled',
+        'n8n_webhook_url',
+        'n8n_api_key',
+        'n8n_extra_headers',
+        'n8n_events',
     ];
 
     protected $casts = [
@@ -49,6 +55,9 @@ class Chatbot extends Model
         'voice_support' => 'boolean',
         'image_support' => 'boolean',
         'human_takeover_enabled' => 'boolean',
+        'n8n_enabled' => 'boolean',
+        'n8n_extra_headers' => 'array',
+        'n8n_events' => 'array',
         'ai_confidence_threshold' => 'decimal:2',
         'avg_response_time' => 'decimal:2',
         'satisfaction_rating' => 'decimal:2',
