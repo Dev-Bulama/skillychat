@@ -439,15 +439,11 @@ class SystemUpdateController extends Controller
 
         optimize_clear();
 
-        // Return JSON for AJAX requests
-        if ($request->expectsJson() || $request->ajax()) {
-            if ($errorMessage) {
-                return response()->json(['success' => false, 'message' => $errorMessage]);
-            }
-            return response()->json(['success' => true, 'message' => $successMessage ?: translate('Update completed successfully')]);
+        // Always return JSON — this endpoint is called via XMLHttpRequest only
+        if ($errorMessage) {
+            return response()->json(['success' => false, 'message' => $errorMessage]);
         }
-
-        return redirect()->back()->with($response);
+        return response()->json(['success' => true, 'message' => $successMessage ?: translate('Update completed successfully')]);
     }
 
     /**
