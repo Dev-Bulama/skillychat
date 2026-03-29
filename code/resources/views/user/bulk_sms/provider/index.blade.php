@@ -119,7 +119,7 @@
     </div>
 </div>
 
-@push('script')
+@push('script-push')
 <script nonce="{{csp_nonce()}}">
 function showFields(provider) {
     document.querySelectorAll('.provider-fields').forEach(el => el.classList.add('d-none'));

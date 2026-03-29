@@ -194,19 +194,23 @@ class AIManager
     }
 
     /**
-     * Get system-wide API key from environment or config
+     * Get system-wide API key from settings table (with .env fallback)
      *
      * @param string $provider
      * @return string|null
      */
     protected function getSystemApiKey(string $provider): ?string
     {
-        $envKeys = [
-            'openai' => env('OPENAI_API_KEY'),
-            'gemini' => env('GEMINI_API_KEY'),
-            'claude' => env('CLAUDE_API_KEY'),
+        // site_settings() reads from the DB settings table — this is where the admin
+        // stores keys via the AI Settings admin page. Fall back to .env as last resort.
+        $settingsMap = [
+            'openai' => site_settings('open_ai_secret')   ?: env('OPENAI_API_KEY'),
+            'gemini' => site_settings('gemini_api_secret') ?: env('GEMINI_API_KEY'),
+            'claude' => site_settings('claude_api_secret') ?: env('CLAUDE_API_KEY'),
         ];
 
-        return $envKeys[$provider] ?? null;
+        $key = $settingsMap[$provider] ?? null;
+
+        return ($key && trim($key) !== '') ? trim($key) : null;
     }
 }

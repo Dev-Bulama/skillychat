@@ -395,7 +395,23 @@
                                                         </select>
                                                     </div>
                                                 </div>
-                                                <div class="col-12">
+                                                <!-- Gemini Key -->
+                                                <div class="col-lg-12 mt-3">
+                                                    <div class="form-inner">
+                                                        <label for="gemini_api_secret" class="form-label">{{ translate('Google Gemini API Key') }}</label>
+                                                        <input placeholder="{{translate('Google Gemini API Key (for chatbot Gemini provider)')}}" type="text" id="gemini_api_secret" name="site_settings[gemini_api_secret]" class="form-control" value="{{ is_demo() ? '@@@' : site_settings('gemini_api_secret') }}">
+                                                    </div>
+                                                </div>
+
+                                                <!-- Claude / Anthropic Key -->
+                                                <div class="col-lg-12 mt-3">
+                                                    <div class="form-inner">
+                                                        <label for="claude_api_secret" class="form-label">{{ translate('Anthropic Claude API Key') }}</label>
+                                                        <input placeholder="{{translate('Anthropic Claude API Key (for chatbot Claude provider)')}}" type="text" id="claude_api_secret" name="site_settings[claude_api_secret]" class="form-control" value="{{ is_demo() ? '@@@' : site_settings('claude_api_secret') }}">
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-12 mt-3">
                                                     <button type="submit" class="i-btn ai-btn btn--md btn--primary" data-anim="ripple">
                                                         {{translate("Submit")}}
                                                     </button>
