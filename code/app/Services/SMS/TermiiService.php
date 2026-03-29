@@ -15,13 +15,15 @@ class TermiiService implements SmsServiceInterface
         $from     = $senderId ?? ($this->credentials['sender_id'] ?? 'N-Alert');
 
         try {
+            $channel = $this->credentials['channel'] ?? 'generic';
+
             $response = Http::timeout(15)->post('https://api.ng.termii.com/api/sms/send', [
                 'to'         => $to,
                 'from'       => $from,
                 'sms'        => $message,
                 'type'       => 'plain',
                 'api_key'    => $apiKey,
-                'channel'    => 'generic',
+                'channel'    => $channel,
             ]);
 
             $body = $response->json();

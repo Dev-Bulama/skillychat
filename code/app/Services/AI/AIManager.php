@@ -167,7 +167,7 @@ class AIManager
      * @param string $provider
      * @return string|null
      */
-    protected function getApiKeyForProvider(Chatbot $chatbot, string $provider): ?string
+    public function getApiKeyForProvider(Chatbot $chatbot, string $provider): ?string
     {
         $apiKeyModel = ChatbotApiKey::where('chatbot_id', $chatbot->id)
             ->where('provider', $provider)

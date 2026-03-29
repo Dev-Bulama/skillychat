@@ -83,7 +83,19 @@ class ChatbotService
      */
     public function updateChatbot(Chatbot $chatbot, array $data): Chatbot
     {
-        $chatbot->update(array_filter($data));
+        // Boolean fields that must be set to false when absent from form (unchecked checkboxes)
+        $booleanFields = [
+            'emoji_support', 'voice_support', 'image_support',
+            'human_takeover_enabled', 'n8n_enabled',
+        ];
+
+        $updateData = array_filter($data, fn($v) => $v !== null && $v !== '');
+
+        foreach ($booleanFields as $field) {
+            $updateData[$field] = isset($data[$field]) && $data[$field];
+        }
+
+        $chatbot->update($updateData);
 
         return $chatbot->fresh();
     }
@@ -210,11 +222,25 @@ class ChatbotService
                 [['role' => 'user', 'content' => $message]]
             );
 
-            $aiProvider = $this->aiManager->getProvider($chatbot);
-            $aiResponse = $aiProvider->chat($messages, [
-                'temperature' => 0.7,
-                'max_tokens' => 1000,
-            ]);
+            try {
+                $aiProvider = $this->aiManager->getProvider($chatbot);
+                $aiResponse = $aiProvider->chat($messages, [
+                    'temperature' => 0.7,
+                    'max_tokens' => 1000,
+                ]);
+            } catch (Exception $e) {
+                // No AI key configured — return a polite fallback so chat still works
+                Log::warning('ChatbotService: AI provider unavailable, using fallback. ' . $e->getMessage());
+                $aiResponse = [
+                    'success'       => true,
+                    'message'       => "Thank you for your message! Our team will get back to you shortly.",
+                    'provider'      => 'fallback',
+                    'confidence'    => 1.0,
+                    'tokens_used'   => 0,
+                    'cost'          => 0,
+                    'response_time' => 0,
+                ];
+            }
 
             if (!$aiResponse['success']) {
                 throw new Exception($aiResponse['error'] ?? 'AI provider error');
@@ -288,8 +314,20 @@ class ChatbotService
                 return $visitorMessage;
             }
 
-            $aiProvider = $this->aiManager->getProvider($chatbot);
-            $aiResponse = $aiProvider->analyzeImage($fullPath, $prompt);
+            try {
+                $aiProvider = $this->aiManager->getProvider($chatbot);
+                $aiResponse = $aiProvider->analyzeImage($fullPath, $prompt);
+            } catch (Exception $e) {
+                Log::warning('ChatbotService: AI vision unavailable, using fallback. ' . $e->getMessage());
+                $aiResponse = [
+                    'success'       => true,
+                    'message'       => "I've received your image. Our team will review it and get back to you shortly.",
+                    'provider'      => 'fallback',
+                    'tokens_used'   => 0,
+                    'cost'          => 0,
+                    'response_time' => 0,
+                ];
+            }
 
             if (!$aiResponse['success']) {
                 throw new Exception($aiResponse['error'] ?? 'AI vision error');
@@ -664,8 +702,13 @@ PROMPT;
             $audioPath = $audio->store('chatbot_voice/' . $chatbot->id, 'public');
             $fullPath = Storage::disk('public')->path($audioPath);
 
-            // Transcribe the audio using OpenAI Whisper
-            $transcription = $this->transcribeAudio($chatbot, $fullPath);
+            // Transcribe the audio using OpenAI Whisper (fall back to placeholder if unavailable)
+            try {
+                $transcription = $this->transcribeAudio($chatbot, $fullPath);
+            } catch (Exception $e) {
+                Log::warning('ChatbotService: voice transcription unavailable. ' . $e->getMessage());
+                $transcription = '[Voice message received]';
+            }
 
             // Create visitor message with transcription
             $visitorMessage = $conversation->addMessage([
@@ -684,8 +727,15 @@ PROMPT;
             }
 
             // Process the transcribed text as a normal message
+            $systemPrompt = $this->buildSystemPrompt($chatbot);
+            $chatHistory  = $this->buildChatHistory($conversation);
+            $messages = array_merge(
+                [['role' => 'system', 'content' => $systemPrompt]],
+                $chatHistory,
+                [['role' => 'user', 'content' => $transcription]]
+            );
             $aiProvider = $this->aiManager->getProvider($chatbot);
-            $aiResponse = $aiProvider->chat($this->buildChatHistory($conversation, $transcription));
+            $aiResponse = $aiProvider->chat($messages, ['temperature' => 0.7, 'max_tokens' => 1000]);
 
             if (!$aiResponse['success']) {
                 throw new Exception($aiResponse['error'] ?? 'AI response error');

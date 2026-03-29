@@ -28,14 +28,15 @@ class ThemeService
         try {
             $theme = Theme::findOrFail($themeId);
 
-            if (!$theme->directoryExists()) {
+            // Only check for physical files on user-installed (non-system) themes
+            if (!$theme->is_system && !$theme->directoryExists()) {
                 return ['success' => false, 'message' => translate('Theme files not found')];
             }
 
             DB::beginTransaction();
             $theme->activate();
             Cache::forget('active_theme');
-            \Artisan::call('view:clear');
+            try { \Artisan::call('view:clear'); } catch (\Throwable $e) {}
             DB::commit();
 
             return ['success' => true, 'message' => translate('Theme activated successfully')];
