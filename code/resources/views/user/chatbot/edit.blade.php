@@ -142,6 +142,48 @@
                     </div>
                 </div>
 
+                {{-- n8n Automation --}}
+                @if(\App\Models\FeatureFlag::enabled('n8n_automation'))
+                <div class="col-12">
+                    <hr>
+                    <h6 class="fw-semibold mb-2">
+                        <i class="bi bi-diagram-3 me-1"></i> {{translate('n8n Automation')}}
+                    </h6>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="n8n_enabled" name="n8n_enabled" value="1"
+                            {{old('n8n_enabled', $chatbot->n8n_enabled) ? 'checked' : ''}} onchange="toggleN8n(this)">
+                        <label class="form-check-label" for="n8n_enabled">{{translate('Enable n8n Webhook Automation')}}</label>
+                    </div>
+                    <div id="n8n_fields" class="{{old('n8n_enabled', $chatbot->n8n_enabled) ? '' : 'd-none'}}">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label">{{translate('Webhook URL')}}</label>
+                                <input type="url" class="form-control" name="n8n_webhook_url"
+                                    value="{{old('n8n_webhook_url', $chatbot->n8n_webhook_url)}}"
+                                    placeholder="https://your-n8n.com/webhook/abc123">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">{{translate('API Key')}} <small class="text-muted">{{translate('(blank = keep unchanged)')}}</small></label>
+                                <input type="password" class="form-control" name="n8n_api_key" placeholder="••••••••">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">{{translate('Trigger Events')}}</label>
+                                <div class="d-flex flex-wrap gap-3">
+                                    @foreach(['new_message' => 'New Message', 'new_lead' => 'New Lead', 'campaign_sent' => 'Campaign Sent'] as $val => $label)
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="n8n_events[]"
+                                            value="{{$val}}" id="n8n_event_{{$val}}"
+                                            {{in_array($val, (array) old('n8n_events', $chatbot->n8n_events ?? ['new_message'])) ? 'checked' : ''}}>
+                                        <label class="form-check-label" for="n8n_event_{{$val}}">{{translate($label)}}</label>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
                 <div class="col-md-12">
                     <button type="submit" class="i-btn primary btn--md capsuled">
                         <i class="bi bi-check-circle me-1"></i> {{translate('Update Chatbot')}}
@@ -152,4 +194,11 @@
     </div>
 </div>
 
+@push('script')
+<script nonce="{{csp_nonce()}}">
+function toggleN8n(checkbox) {
+    document.getElementById('n8n_fields').classList.toggle('d-none', !checkbox.checked);
+}
+</script>
+@endpush
 @endsection

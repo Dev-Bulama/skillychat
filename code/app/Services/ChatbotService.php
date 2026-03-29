@@ -11,6 +11,7 @@ use App\Models\ChatbotTrainingData;
 use App\Models\ChatbotUsageLog;
 use App\Models\User;
 use App\Services\AI\AIManager;
+use App\Services\N8nService;
 use Exception;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -21,10 +22,12 @@ use Illuminate\Support\Str;
 class ChatbotService
 {
     protected AIManager $aiManager;
+    protected N8nService $n8n;
 
-    public function __construct(AIManager $aiManager)
+    public function __construct(AIManager $aiManager, N8nService $n8n)
     {
         $this->aiManager = $aiManager;
+        $this->n8n       = $n8n;
     }
 
     /**
@@ -58,6 +61,11 @@ class ChatbotService
                 'ai_provider' => $data['ai_provider'] ?? 'openai',
                 'ai_confidence_threshold' => $data['ai_confidence_threshold'] ?? 0.70,
                 'status' => 'active',
+                'n8n_enabled'      => $data['n8n_enabled'] ?? false,
+                'n8n_webhook_url'  => $data['n8n_webhook_url'] ?? null,
+                'n8n_api_key'      => $data['n8n_api_key'] ?? null,
+                'n8n_extra_headers'=> isset($data['n8n_extra_headers']) ? (is_array($data['n8n_extra_headers']) ? $data['n8n_extra_headers'] : []) : [],
+                'n8n_events'       => $data['n8n_events'] ?? ['new_message'],
             ]);
 
             $this->addDefaultAgent($chatbot, $user);
@@ -231,6 +239,14 @@ class ChatbotService
             }
 
             DB::commit();
+
+            // Fire n8n webhook (non-blocking, errors suppressed)
+            $this->n8n->fire($chatbot, 'new_message', [
+                'conversation_id' => $conversation->uid,
+                'visitor_id'      => $conversation->visitor_id,
+                'user_message'    => $message,
+                'ai_response'     => $aiMessage->message,
+            ]);
 
             return $aiMessage;
         } catch (Exception $e) {

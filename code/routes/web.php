@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\User\AiVideoController;
+use App\Http\Controllers\User\BulkEmailController;
+use App\Http\Controllers\User\BulkSmsController;
 use App\Http\Controllers\User\SocialPostController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\User\ChatbotController;
@@ -347,6 +349,44 @@ use Illuminate\Support\Facades\Http;
              Route::post('/{uid}/api-keys/store', 'storeApiKey')->name('api-keys.store');
              Route::get('/{uid}/api-keys/{keyId}/destroy', 'destroyApiKey')->name('api-keys.destroy');
              Route::post('/{uid}/api-keys/{keyId}/set-default', 'setDefaultApiKey')->name('api-keys.set-default');
+         });
+
+         # ── Bulk SMS ─────────────────────────────────────────────────────────────────
+         Route::controller(BulkSmsController::class)->name('bulk-sms.')->prefix('bulk-sms/')->group(function () {
+             Route::get('/campaigns',             'index')->name('index');
+             Route::get('/campaigns/create',      'create')->name('create');
+             Route::post('/campaigns/store',      'store')->name('store');
+             Route::get('/campaigns/{uid}',       'show')->name('show');
+             Route::get('/campaigns/{uid}/launch','launch')->name('launch');
+             Route::get('/campaigns/{uid}/delete','destroy')->name('destroy');
+
+             Route::get('/contacts',              'contacts')->name('contacts');
+             Route::post('/contacts/store',       'storeContact')->name('contacts.store');
+             Route::post('/contacts/import',      'importContacts')->name('contacts.import');
+             Route::get('/contacts/{id}/delete',  'destroyContact')->name('contacts.destroy');
+
+             Route::post('/groups/store',         'storeGroup')->name('groups.store');
+             Route::get('/groups/{id}/delete',    'destroyGroup')->name('groups.destroy');
+
+             Route::get('/provider',              'provider')->name('provider');
+             Route::post('/provider/store',       'storeProvider')->name('provider.store');
+             Route::get('/provider/{id}/delete',  'destroyProvider')->name('provider.destroy');
+             Route::post('/provider/{id}/test',   'testProvider')->name('provider.test');
+         });
+
+         # ── Bulk Email ────────────────────────────────────────────────────────────────
+         Route::controller(BulkEmailController::class)->name('bulk-email.')->prefix('bulk-email/')->group(function () {
+             Route::get('/campaigns',             'index')->name('index');
+             Route::get('/campaigns/create',      'create')->name('create');
+             Route::post('/campaigns/store',      'store')->name('store');
+             Route::get('/campaigns/{uid}',       'show')->name('show');
+             Route::get('/campaigns/{uid}/launch','launch')->name('launch');
+             Route::get('/campaigns/{uid}/delete','destroy')->name('destroy');
+
+             Route::get('/provider',              'provider')->name('provider');
+             Route::post('/provider/store',       'storeProvider')->name('provider.store');
+             Route::get('/provider/{id}/delete',  'destroyProvider')->name('provider.destroy');
+             Route::post('/provider/{id}/test',   'testProvider')->name('provider.test');
          });
 
          # User-level API key management (global keys)

@@ -403,9 +403,28 @@ class ChatController extends Controller
                 ->active()
                 ->firstOrFail();
 
+            // Domain restriction: if the chatbot has a domain set, validate the request origin
+            if ($chatbot->domain) {
+                $origin = request()->header('Origin') ?: request()->header('Referer');
+                if ($origin) {
+                    $originHost = parse_url($origin, PHP_URL_HOST);
+                    $allowedHost = parse_url($chatbot->domain, PHP_URL_HOST);
+                    // Strip leading www. for comparison
+                    $originHost = preg_replace('/^www\./', '', $originHost ?? '');
+                    $allowedHost = preg_replace('/^www\./', '', $allowedHost ?? '');
+                    if ($originHost && $allowedHost && $originHost !== $allowedHost) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'This chatbot is not authorized for this domain.',
+                        ], 403);
+                    }
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'config' => [
+                    'chatbot_id' => $chatbot->uid,
                     'name' => $chatbot->name,
                     'welcome_message' => $chatbot->welcome_message,
                     'offline_message' => $chatbot->offline_message,

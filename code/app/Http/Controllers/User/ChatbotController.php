@@ -91,6 +91,11 @@ class ChatbotController extends Controller
             'human_takeover_enabled' => 'nullable|boolean',
             'ai_provider' => 'nullable|string|in:openai,gemini,claude',
             'ai_confidence_threshold' => 'nullable|numeric|min:0|max:1',
+            'n8n_enabled' => 'nullable|boolean',
+            'n8n_webhook_url' => 'nullable|url|max:500',
+            'n8n_api_key' => 'nullable|string|max:500',
+            'n8n_events' => 'nullable|array',
+            'n8n_events.*' => 'nullable|string|in:new_message,new_lead,campaign_sent',
         ]);
 
         if ($validator->fails()) {
@@ -151,6 +156,11 @@ class ChatbotController extends Controller
             'ai_provider' => 'nullable|string|in:openai,gemini,claude',
             'ai_confidence_threshold' => 'nullable|numeric|min:0|max:1',
             'status' => 'nullable|string|in:active,inactive',
+            'n8n_enabled' => 'nullable|boolean',
+            'n8n_webhook_url' => 'nullable|url|max:500',
+            'n8n_api_key' => 'nullable|string|max:500',
+            'n8n_events' => 'nullable|array',
+            'n8n_events.*' => 'nullable|string|in:new_message,new_lead,campaign_sent',
         ]);
 
         if ($validator->fails()) {

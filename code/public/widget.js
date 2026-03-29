@@ -1272,10 +1272,12 @@
         }
 
         getOrCreateVisitorId() {
-            let visitorId = localStorage.getItem('chatbot_visitor_id');
+            // Namespace visitor ID per chatbot to prevent cross-chatbot data leakage
+            const storageKey = 'chatbot_visitor_id_' + this.chatbotId;
+            let visitorId = localStorage.getItem(storageKey);
             if (!visitorId) {
-                visitorId = 'visitor_' + Math.random().toString(36).substring(2, 15);
-                localStorage.setItem('chatbot_visitor_id', visitorId);
+                visitorId = 'visitor_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now().toString(36);
+                localStorage.setItem(storageKey, visitorId);
             }
             return visitorId;
         }

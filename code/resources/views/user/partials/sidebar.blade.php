@@ -4,6 +4,9 @@
     $subscription = $user->runningSubscription;
     $webhookAccess = @optional($subscription->package->social_access)->webhook_access;
     $accessPlatforms = (array) ($subscription ? @$subscription?->package?->social_access?->platform_access : []);
+    $socialMediaEnabled = \App\Models\FeatureFlag::enabled('social_media');
+    $bulkSmsEnabled     = \App\Models\FeatureFlag::enabled('bulk_sms');
+    $bulkEmailEnabled   = \App\Models\FeatureFlag::enabled('bulk_email');
 
     $platforms = get_platform()
     ->whereIn('id', $accessPlatforms )
@@ -45,6 +48,7 @@
                     $lastSegment = collect(request()->segments())->last();
                     @endphp
 
+                    @if($socialMediaEnabled)
                     <li class="sidemenu-item">
                         <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse
                             @if(request()->routeIs('user.social.post.*'))
@@ -126,6 +130,7 @@
                             </ul>
                         </div>
                     </li>
+                    @endif {{-- end socialMediaEnabled --}}
 
                     <li class="sidemenu-item">
                         <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse
@@ -242,6 +247,67 @@
                             </ul>
                         </div>
                     </li>
+
+                    @if($bulkSmsEnabled)
+                    <li class="sidemenu-item">
+                        <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse @if(request()->routeIs('user.bulk-sms.*')) active @endif">
+                            <div class="sidemenu-icon"><i class="bi bi-phone"></i></div>
+                            <span>{{translate("Bulk SMS")}} <small><i class="bi bi-chevron-down"></i></small></span>
+                        </a>
+                        <div class="side-menu-dropdown @if(request()->routeIs('user.bulk-sms.*')) show-sideMenu @endif">
+                            <ul class="sub-menu">
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{request()->routeIs('user.bulk-sms.index') ? 'active' :''}}" href="{{route('user.bulk-sms.index')}}">
+                                        <span><i class="bi bi-list-ul"></i></span><p>{{translate('Campaigns')}}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{request()->routeIs('user.bulk-sms.create') ? 'active' :''}}" href="{{route('user.bulk-sms.create')}}">
+                                        <span><i class="bi bi-plus-circle"></i></span><p>{{translate('New Campaign')}}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{request()->routeIs('user.bulk-sms.contacts*') ? 'active' :''}}" href="{{route('user.bulk-sms.contacts')}}">
+                                        <span><i class="bi bi-people"></i></span><p>{{translate('Contacts')}}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{request()->routeIs('user.bulk-sms.provider*') ? 'active' :''}}" href="{{route('user.bulk-sms.provider')}}">
+                                        <span><i class="bi bi-gear"></i></span><p>{{translate('SMS Provider')}}</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    @endif
+
+                    @if($bulkEmailEnabled)
+                    <li class="sidemenu-item">
+                        <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse @if(request()->routeIs('user.bulk-email.*')) active @endif">
+                            <div class="sidemenu-icon"><i class="bi bi-envelope-paper"></i></div>
+                            <span>{{translate("Bulk Email")}} <small><i class="bi bi-chevron-down"></i></small></span>
+                        </a>
+                        <div class="side-menu-dropdown @if(request()->routeIs('user.bulk-email.*')) show-sideMenu @endif">
+                            <ul class="sub-menu">
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{request()->routeIs('user.bulk-email.index') ? 'active' :''}}" href="{{route('user.bulk-email.index')}}">
+                                        <span><i class="bi bi-list-ul"></i></span><p>{{translate('Campaigns')}}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{request()->routeIs('user.bulk-email.create') ? 'active' :''}}" href="{{route('user.bulk-email.create')}}">
+                                        <span><i class="bi bi-plus-circle"></i></span><p>{{translate('New Campaign')}}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{request()->routeIs('user.bulk-email.provider*') ? 'active' :''}}" href="{{route('user.bulk-email.provider')}}">
+                                        <span><i class="bi bi-gear"></i></span><p>{{translate('Email Provider')}}</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    @endif
 
                     <li class="sidemenu-item">
                         <a href="{{route('user.plan')}}" class="sidemenu-link  {{request()->routeIs('user.plan') ? 'active' :''}}">

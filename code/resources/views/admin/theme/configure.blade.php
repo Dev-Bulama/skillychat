@@ -112,6 +112,45 @@
                                 </div>
                             </div>
 
+                            {{-- Custom CSS / JS / Tailwind --}}
+                            <div class="col-12 mt-4">
+                                <h5 class="mb-3">{{translate('Custom Code')}}
+                                    <small class="text-muted fw-normal fs-6">{{translate('Supports Tailwind CDN, Google Fonts, custom CSS & JS')}}</small>
+                                </h5>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="form-inner">
+                                    <label>{{translate('Custom Head HTML')}}
+                                        <small class="text-muted">{{translate('Injected inside &lt;head&gt; — CDN links, meta tags, Tailwind CDN, etc.')}}</small>
+                                    </label>
+                                    <textarea name="config[custom][head_html]" rows="5"
+                                        class="form-control font-monospace"
+                                        placeholder='&lt;link href="https://cdn.tailwindcss.com" rel="stylesheet"&gt;'>{{$theme->getConfig('custom.head_html', '')}}</textarea>
+                                </div>
+                            </div>
+
+                            <div class="col-12 mt-3">
+                                <div class="form-inner">
+                                    <label>{{translate('Custom CSS')}}</label>
+                                    <textarea name="config[custom][css]" rows="8"
+                                        class="form-control font-monospace"
+                                        placeholder=":root { --primary: #4F46E5; }">{{$theme->getConfig('custom.css', '')}}</textarea>
+                                </div>
+                            </div>
+
+                            <div class="col-12 mt-3">
+                                <div class="form-inner">
+                                    <label>{{translate('Custom JavaScript')}}
+                                        <small class="text-muted">{{translate('No &lt;script&gt; wrapper needed')}}</small>
+                                    </label>
+                                    <textarea name="config[custom][js]" rows="6"
+                                        class="form-control font-monospace"
+                                        placeholder="// document.addEventListener('DOMContentLoaded', () => {});
+">{{$theme->getConfig('custom.js', '')}}</textarea>
+                                </div>
+                            </div>
+
                             <div class="col-12 mt-4">
                                 <button type="submit" class="i-btn btn--md btn--primary">
                                     <i class="las la-save"></i> {{translate('Save Configuration')}}

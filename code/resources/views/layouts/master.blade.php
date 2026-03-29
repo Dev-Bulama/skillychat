@@ -167,6 +167,13 @@
     @include('partials.theme')
     @stack('styles')
     @stack('style-include')
+    @php $activeTheme = \App\Models\Theme::getActive(); @endphp
+    @if($activeTheme && $activeTheme->getConfig('custom.head_html'))
+        {!! $activeTheme->getConfig('custom.head_html') !!}
+    @endif
+    @if($activeTheme && $activeTheme->getConfig('custom.css'))
+        <style nonce="{{ csp_nonce() }}">{!! $activeTheme->getConfig('custom.css') !!}</style>
+    @endif
 
 
     <style nonce="{{ csp_nonce() }}">
@@ -490,4 +497,7 @@
     @include('partials.notify')
     @stack('script-include')
     @stack('script-push')
+    @if(isset($activeTheme) && $activeTheme && $activeTheme->getConfig('custom.js'))
+        <script nonce="{{ csp_nonce() }}">{!! $activeTheme->getConfig('custom.js') !!}</script>
+    @endif
   </body>
