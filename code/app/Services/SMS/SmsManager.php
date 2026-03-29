@@ -24,8 +24,9 @@ class SmsManager
             'termii'  => [
                 'label'  => 'Termii',
                 'fields' => [
-                    ['key' => 'api_key',   'label' => 'API Key',   'type' => 'password', 'required' => true],
-                    ['key' => 'sender_id', 'label' => 'Sender ID', 'type' => 'text',     'required' => false],
+                    ['key' => 'api_key',   'label' => 'API Key',                        'type' => 'password', 'required' => true],
+                    ['key' => 'sender_id', 'label' => 'Sender ID',                      'type' => 'text',     'required' => false],
+                    ['key' => 'channel',   'label' => 'Channel (generic/dnd/whatsapp)', 'type' => 'text',     'required' => false],
                 ],
             ],
             'twilio' => [

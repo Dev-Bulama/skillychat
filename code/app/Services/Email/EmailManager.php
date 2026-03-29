@@ -14,6 +14,7 @@ class EmailManager
             'sendgrid' => new SendGridService($credentials),
             'mailgun'  => new MailgunService($credentials),
             'smtp'     => new SmtpEmailService($credentials),
+            'phpmail'  => new PhpMailService($credentials),
             default    => throw new \InvalidArgumentException("Unknown email provider: {$provider->provider}"),
         };
     }
@@ -21,6 +22,13 @@ class EmailManager
     public static function supportedProviders(): array
     {
         return [
+            'phpmail' => [
+                'label'  => 'PHP Native Mail (Sendmail)',
+                'fields' => [
+                    ['key' => 'from_email', 'label' => 'From Email', 'type' => 'email', 'required' => false],
+                    ['key' => 'from_name',  'label' => 'From Name',  'type' => 'text',  'required' => false],
+                ],
+            ],
             'sendgrid' => [
                 'label'  => 'SendGrid',
                 'fields' => [
