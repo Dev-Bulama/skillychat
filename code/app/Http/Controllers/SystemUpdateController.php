@@ -324,27 +324,45 @@ class SystemUpdateController extends Controller
                 }
                 $zip->close();
 
-                // Read and validate configuration file
-                $configFilePath = $extractPath . 'config.json';
-                if (!File::exists($configFilePath)) {
-                    File::deleteDirectory($basePath);
-                    $errorMessage = translate('Error! No configuration file found');
-                    if ($request->expectsJson() || $request->ajax()) {
-                        return response()->json(['success' => false, 'message' => $errorMessage]);
-                    }
-                    return back()->with("error", $errorMessage);
+                // ── Unwrap GitHub-style ZIPs ──────────────────────────────────────────
+                // GitHub archives wrap everything inside a single subdirectory
+                // (e.g. skillychat-master/). Detect this and treat that dir as root.
+                $extractRoot = $extractPath;
+                $topLevel    = array_filter(
+                    File::directories($extractPath),
+                    fn($d) => File::isDirectory($d)
+                );
+                if (count($topLevel) === 1 && count(File::files($extractPath)) === 0) {
+                    // All content is inside the single subdirectory
+                    $extractRoot = rtrim(array_values($topLevel)[0], '/') . '/';
+                    \Log::info('SystemUpdate: detected GitHub-style ZIP wrapper, using root: ' . $extractRoot);
                 }
 
-                $configJson = json_decode(File::get($configFilePath), true);
+                // ── Read or auto-generate config.json ────────────────────────────────
+                $configFilePath = $extractRoot . 'config.json';
+                if (File::exists($configFilePath)) {
+                    $configJson = json_decode(File::get($configFilePath), true);
+                } else {
+                    // No config.json — treat as a raw project ZIP.
+                    // Auto-generate a minimal config that bumps the version by 0.1.
+                    $currentVersion = (float) (site_settings('app_version') ?? 1.1);
+                    $newAutoVersion = round($currentVersion + 0.1, 1);
+                    $configJson = [
+                        'version'    => (string) $newAutoVersion,
+                        'migrations' => [],
+                        'seeder'     => [],
+                    ];
+                    \Log::info("SystemUpdate: no config.json found — auto-generated version {$newAutoVersion}");
+                }
 
                 if (empty($configJson) || empty($configJson['version'])) {
                     File::deleteDirectory($basePath);
                     $errorMessage = translate('Error! Invalid configuration file');
-                    if ($request->expectsJson() || $request->ajax()) {
-                        return response()->json(['success' => false, 'message' => $errorMessage]);
-                    }
-                    return back()->with("error", $errorMessage);
+                    return response()->json(['success' => false, 'message' => $errorMessage]);
                 }
+
+                // Re-point extractPath to the actual root (may be a subdirectory)
+                $extractPath = $extractRoot;
 
                 // Check if update ZIP contains .env file and remove it to prevent overwriting
                 $envFileInZip = $extractPath . '.env';
