@@ -915,6 +915,7 @@
             // Send the request
             xhr.open('POST', '{{route("admin.system.update")}}', true);
             xhr.setRequestHeader('X-CSRF-TOKEN', '{{ csrf_token() }}');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
             xhr.send(formData);
         });
 
