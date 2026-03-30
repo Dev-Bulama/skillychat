@@ -412,6 +412,7 @@ use Illuminate\Support\Facades\Http;
              Route::post('/set-status', 'setStatus')->name('set-status');
              Route::post('/poll-messages', 'pollMessages')->name('poll-messages');
              Route::get('/pending-count', 'getPendingCount')->name('pending-count');
+             Route::get('/conversations-list', 'getConversationsList')->name('conversations-list');
          });
 
         });

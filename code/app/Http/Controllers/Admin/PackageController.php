@@ -324,7 +324,7 @@ class PackageController extends Controller
         $plans = [
             [
                 'title'                       => 'Free Plan',
-                'duration'                    => PlanDuration::UNLIMITED->value,
+                'duration'                    => PlanDuration::MONTHLY->value,  // MONTHLY=1; is_free flag makes it free
                 'price'                       => 0,
                 'discount_price'              => 0,
                 'description'                 => 'Get started for free with basic chatbot features.',

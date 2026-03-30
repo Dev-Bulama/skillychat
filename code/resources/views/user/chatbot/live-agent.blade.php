@@ -222,6 +222,7 @@
         setStatus:  '{{ route('user.live-agent.set-status') }}',
         pollMsgs:   '{{ route('user.live-agent.poll-messages') }}',
         pending:    '{{ route('user.live-agent.pending-count') }}',
+        convList:   '{{ route('user.live-agent.conversations-list') }}',
     };
     const CSRF = '{{ csrf_token() }}';
 
@@ -354,27 +355,52 @@
             }).catch(() => {});
     }
 
-    // ── Pending-count poll (for notification) ─────────────
-    function pollPending() {
-        fetch(ROUTES.pending)
+    // ── Conversation list refresh ─────────────────────────
+    function refreshConversationList() {
+        fetch(ROUTES.convList)
             .then(r => r.json())
             .then(data => {
                 if (!data.success) return;
-                const count = data.pending_count;
+                const count = data.conversations.filter(c => c.status === 'human_requested').length;
                 const pill  = document.getElementById('pendingPill');
                 const stat  = document.getElementById('stat-pending');
                 if (stat) stat.textContent = count;
                 pill.textContent = count;
                 pill.classList.toggle('visible', count > 0);
+
                 if (count > knownPending) {
                     showToast('{{ translate("New conversation waiting for an agent!") }}');
-                    // Play a subtle sound if supported
                     try { new Audio('data:audio/wav;base64,UklGRnoAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQoAAAABAAAAAQAA').play().catch(()=>{}); } catch(e){}
                 }
                 knownPending = count;
+
+                // Re-render the conversation list sidebar
+                const list = document.getElementById('conversationList');
+                if (!data.conversations.length) {
+                    list.innerHTML = `<div class="text-center py-5 text-muted px-3">
+                        <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                        <small>{{ translate("No active conversations") }}</small>
+                    </div>`;
+                    return;
+                }
+                const badgeClass = { human_requested: 'pending', human_active: 'active', resolved: 'resolved' };
+                const badgeLabel = { human_requested: '{{ translate("Pending") }}', human_active: '{{ translate("Active") }}', resolved: '{{ translate("Resolved") }}' };
+                list.innerHTML = data.conversations.map(c => `
+                    <div class="la-item ${c.uid === activeUid ? 'active' : ''}"
+                         data-uid="${escHtml(c.uid)}"
+                         onclick="openConversation('${escHtml(c.uid)}', this)">
+                        <div class="la-item-name">${escHtml(c.visitor_name)}</div>
+                        <div class="la-item-preview">${escHtml(c.chatbot_name)}</div>
+                        <div class="la-item-meta">
+                            <span class="la-badge ${badgeClass[c.status] || ''}">${badgeLabel[c.status] || c.status}</span>
+                            <small class="text-muted" style="font-size:.7rem;">${escHtml(c.last_message)}</small>
+                        </div>
+                    </div>`).join('');
             }).catch(() => {});
     }
-    pendingPollTimer = setInterval(pollPending, 8000);
+    pendingPollTimer = setInterval(refreshConversationList, 8000);
+    // Run immediately on load to catch any existing pending conversations
+    refreshConversationList();
 
     // ── Claim ─────────────────────────────────────────────
     window.claimConversation = function () {
