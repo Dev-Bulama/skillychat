@@ -244,6 +244,19 @@
                                         <p>{{ translate('API Keys') }}</p>
                                     </a>
                                 </li>
+
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.live-agent.*') ? 'active' : '' }}" href="{{ route('user.live-agent.dashboard') }}">
+                                        <span><i class="bi bi-headset"></i></span>
+                                        <p>
+                                            {{ translate('Live Agent') }}
+                                            @php $pendingCount = \App\Models\ChatbotConversation::whereIn('chatbot_id', \App\Models\Chatbot::where('user_id', auth_user()->id)->pluck('id'))->where('status','human_requested')->count(); @endphp
+                                            @if($pendingCount > 0)
+                                                <span class="badge bg-danger ms-1" style="font-size:.65rem;">{{ $pendingCount }}</span>
+                                            @endif
+                                        </p>
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                     </li>
@@ -439,6 +452,17 @@
                             </span>
                         </a>
                     </li>
+
+                    @if(site_settings('user_docs_content'))
+                    <li class="sidemenu-item">
+                        <a href="{{ route('user.documentation') }}" target="_blank" class="sidemenu-link {{ request()->routeIs('user.documentation') ? 'active' : '' }}">
+                            <div class="sidemenu-icon">
+                                <i class="bi bi-book"></i>
+                            </div>
+                            <span>{{ translate(site_settings('user_docs_label') ?: 'Documentation') }}</span>
+                        </a>
+                    </li>
+                    @endif
 
                     <li class="side-menu-title">
                         {{translate('Setting')}}

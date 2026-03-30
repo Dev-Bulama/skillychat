@@ -45,6 +45,16 @@
                                     <i class="las la-cogs me-1"></i>  {{translate('Configuration')}}
                                 </button>
                             @endif
+
+                            @if(check_permission('create_package'))
+                                <form method="POST" action="{{ route('admin.subscription.package.import.demo.plans') }}" style="display:inline;"
+                                    onsubmit="return confirm('{{ translate('Import demo Free, Monthly, Quarterly, and Annual plans? Existing plans will not be overwritten.') }}')">
+                                    @csrf
+                                    <button type="submit" class="i-btn btn--sm warning">
+                                        <i class="las la-cloud-download-alt me-1"></i> {{translate('Import Demo Plans')}}
+                                    </button>
+                                </form>
+                            @endif
                         </div>
                     @endif
                     <div class="col-md-6 d-flex justify-content-end">

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\PlanDuration;
 use App\Enums\StatusEnum;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\PackageRequest;
@@ -312,5 +313,101 @@ class PackageController extends Controller
         }
         return  back()->with($response);
 
+    }
+
+    /**
+     * Import demo subscription plans (Free, Monthly, Tri-monthly, Annual)
+     */
+    public function importDemoPlans(): RedirectResponse
+    {
+        $plans = [
+            [
+                'title'                       => 'Free Plan',
+                'duration'                    => PlanDuration::UNLIMITED->value,
+                'price'                       => 0,
+                'discount_price'              => 0,
+                'description'                 => 'Get started for free with basic chatbot features.',
+                'is_free'                     => StatusEnum::true->status(),
+                'is_recommended'              => StatusEnum::false->status(),
+                'is_feature'                  => StatusEnum::false->status(),
+                'max_chatbots'                => 1,
+                'max_messages_per_month'      => 100,
+                'max_agents_per_chatbot'      => 1,
+                'training_data_size_mb'       => 5,
+                'chatbot_voice_enabled'       => false,
+                'chatbot_image_enabled'       => false,
+                'chatbot_human_takeover_enabled' => false,
+                'chatbot_analytics_enabled'   => false,
+            ],
+            [
+                'title'                       => 'Starter Monthly',
+                'duration'                    => PlanDuration::MONTHLY->value,
+                'price'                       => 19,
+                'discount_price'              => 0,
+                'description'                 => 'Perfect for small businesses. Billed monthly.',
+                'is_free'                     => StatusEnum::false->status(),
+                'is_recommended'              => StatusEnum::false->status(),
+                'is_feature'                  => StatusEnum::false->status(),
+                'max_chatbots'                => 3,
+                'max_messages_per_month'      => 2000,
+                'max_agents_per_chatbot'      => 2,
+                'training_data_size_mb'       => 50,
+                'chatbot_voice_enabled'       => true,
+                'chatbot_image_enabled'       => true,
+                'chatbot_human_takeover_enabled' => true,
+                'chatbot_analytics_enabled'   => true,
+            ],
+            [
+                'title'                       => 'Pro Quarterly',
+                'duration'                    => PlanDuration::MONTHLY->value,
+                'price'                       => 49,
+                'discount_price'              => 0,
+                'description'                 => 'Great value for growing teams. Billed every 3 months.',
+                'is_free'                     => StatusEnum::false->status(),
+                'is_recommended'              => StatusEnum::true->status(),
+                'is_feature'                  => StatusEnum::true->status(),
+                'max_chatbots'                => 10,
+                'max_messages_per_month'      => 10000,
+                'max_agents_per_chatbot'      => 5,
+                'training_data_size_mb'       => 200,
+                'chatbot_voice_enabled'       => true,
+                'chatbot_image_enabled'       => true,
+                'chatbot_human_takeover_enabled' => true,
+                'chatbot_analytics_enabled'   => true,
+            ],
+            [
+                'title'                       => 'Enterprise Annual',
+                'duration'                    => PlanDuration::YEARLY->value,
+                'price'                       => 149,
+                'discount_price'              => 0,
+                'description'                 => 'Full power for enterprises. Billed annually. Best value.',
+                'is_free'                     => StatusEnum::false->status(),
+                'is_recommended'              => StatusEnum::false->status(),
+                'is_feature'                  => StatusEnum::true->status(),
+                'max_chatbots'                => -1,
+                'max_messages_per_month'      => -1,
+                'max_agents_per_chatbot'      => -1,
+                'training_data_size_mb'       => 1000,
+                'chatbot_voice_enabled'       => true,
+                'chatbot_image_enabled'       => true,
+                'chatbot_human_takeover_enabled' => true,
+                'chatbot_analytics_enabled'   => true,
+            ],
+        ];
+
+        $created = 0;
+        foreach ($plans as $plan) {
+            if (Package::where('title', $plan['title'])->exists()) {
+                continue;
+            }
+            Package::create($plan);
+            $created++;
+        }
+
+        $msg = $created > 0
+            ? translate("{$created} demo plan(s) imported successfully.")
+            : translate('All demo plans already exist. Nothing was imported.');
+
+        return back()->with(response_status($msg, $created > 0 ? 'success' : 'warning'));
     }
 }

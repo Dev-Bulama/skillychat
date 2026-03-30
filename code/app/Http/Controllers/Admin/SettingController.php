@@ -277,4 +277,34 @@ class SettingController extends Controller
         ]);
 
     }
+
+    /**
+     * User documentation management page
+     */
+    public function userDocumentation(): View
+    {
+        return view('admin.setting.user_documentation', [
+            'title'       => translate('User Documentation'),
+            'breadcrumbs' => ['Home' => 'admin.home', 'User Documentation' => null],
+        ]);
+    }
+
+    /**
+     * Save user documentation content
+     */
+    public function saveUserDocumentation(\Illuminate\Http\Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $request->validate([
+            'user_docs_label'   => 'nullable|string|max:100',
+            'user_docs_content' => 'nullable|string',
+        ]);
+
+        \Illuminate\Support\Facades\DB::table('settings')->upsert([
+            ['key' => 'user_docs_label',   'value' => $request->input('user_docs_label',   'Documentation')],
+            ['key' => 'user_docs_content', 'value' => $request->input('user_docs_content', '')],
+        ], ['key'], ['value']);
+
+        optimize_clear();
+        return redirect()->back()->with('success', translate('Documentation saved successfully.'));
+    }
 }

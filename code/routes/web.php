@@ -150,6 +150,10 @@ use Illuminate\Support\Facades\Http;
                 Route::get('/logout', 'logout')->name('logout')->withoutMiddleware(['kyc','user.verified']);
             });
 
+            #documentation
+            Route::get('/documentation', [\App\Http\Controllers\UserDocumentationController::class, 'show'])->name('documentation');
+            Route::get('/n8n-setup-guide', [\App\Http\Controllers\UserDocumentationController::class, 'n8nGuide'])->name('n8n.guide');
+
             #home & profile route
             Route::controller(HomeController::class)->group(function(){
 
