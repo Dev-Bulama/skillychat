@@ -359,7 +359,9 @@ Route::middleware([
             #affiliate config
             Route::get('/affiliate/configurations', 'affiliate')->name('affiliate');
 
-
+            #user documentation
+            Route::get('/user-documentation', 'userDocumentation')->name('user.documentation');
+            Route::post('/user-documentation/save', 'saveUserDocumentation')->name('user.documentation.save');
 
         });
 
@@ -511,6 +513,7 @@ Route::middleware([
             Route::get('/select/search', 'selectSearch')->name('selectSearch');
             Route::get('/select/search/image', 'selectImageSearch')->name('selectSearch.image');
             Route::get('/select/search/video', 'selectVideoSearch')->name('selectSearch.video');
+            Route::post('/import-demo-plans', 'importDemoPlans')->name('import.demo.plans');
 
         });
 

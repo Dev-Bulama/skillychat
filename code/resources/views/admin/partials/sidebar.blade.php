@@ -758,6 +758,14 @@
                                 </p>
                             </a>
                         </li>
+                        <li class="sub-menu-item">
+                            <a class='sidebar-menu-link {{ sidebar_awake('admin.setting.user.documentation') }}' href='{{ route('admin.setting.user.documentation') }}'>
+                                <span></span>
+                                <p>
+                                    {{ translate('User Documentation') }}
+                                </p>
+                            </a>
+                        </li>
                         @endif
                     </ul>
                 </div>

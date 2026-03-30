@@ -148,6 +148,9 @@
                     <hr>
                     <h6 class="fw-semibold mb-2">
                         <i class="bi bi-diagram-3 me-1"></i> {{translate('n8n Automation')}}
+                        <a href="{{ route('user.n8n.guide') }}" target="_blank" class="ms-2 text-decoration-none" style="font-size:.8rem; font-weight:400;">
+                            <i class="bi bi-box-arrow-up-right"></i> {{translate('Setup Guide')}}
+                        </a>
                     </h6>
                     <div class="form-check form-switch mb-3">
                         <input class="form-check-input" type="checkbox" id="n8n_enabled" name="n8n_enabled" value="1"
@@ -194,7 +197,7 @@
     </div>
 </div>
 
-@push('script')
+@push('script-push')
 <script nonce="{{csp_nonce()}}">
 function toggleN8n(checkbox) {
     document.getElementById('n8n_fields').classList.toggle('d-none', !checkbox.checked);

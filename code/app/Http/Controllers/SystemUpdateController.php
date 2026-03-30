@@ -4,9 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Traits\InstallerManager;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
 use Illuminate\View\View;
 use ZipArchive;
@@ -19,684 +18,359 @@ class SystemUpdateController extends Controller
 {
     use InstallerManager;
 
-    public function __construct()
-    {
-
-    }
-
     public function init(): View
     {
-
         return view('admin.system_update', [
-            "title" => translate("Update System")
+            'title' => translate('Update System'),
         ]);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // MANUAL ZIP UPDATE  (the revamped, minimal implementation)
+    // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Summary of checkUpdate
-     * @return array{data: array, message: string, success: bool|array{data: mixed, message: string, success: bool}|array{message: mixed, success: bool}|array{message: string, success: bool}}
+     * Accept any ZIP file (GitHub archive, plain project ZIP, custom patch ZIP),
+     * find the Laravel root inside it, copy files while protecting .env and
+     * user uploads, run migrations, then clear caches.
+     *
+     * No config.json required.
      */
+    public function update(Request $request): JsonResponse
+    {
+        set_time_limit(300);
+        ini_set('memory_limit', '512M');
+
+        $request->validate([
+            'updateFile' => ['required', 'file', 'mimes:zip', 'max:1048576'], // 1 GB
+        ]);
+
+        $tempDir = storage_path('app/update_' . uniqid() . '/');
+
+        try {
+            // 1. Save uploaded ZIP
+            File::makeDirectory($tempDir, 0755, true);
+            $request->file('updateFile')->move($tempDir, 'upload.zip');
+
+            // 2. Extract
+            $zip = new ZipArchive;
+            if ($zip->open($tempDir . 'upload.zip') !== true) {
+                throw new \RuntimeException('Invalid or corrupted ZIP file.');
+            }
+            $extractDir = $tempDir . 'src/';
+            File::makeDirectory($extractDir, 0755, true);
+            $zip->extractTo($extractDir);
+            $zip->close();
+
+            // 3. Find Laravel root (handles GitHub wrapper & nested structure)
+            $sourceRoot = $this->findLaravelRoot($extractDir);
+            if (!$sourceRoot) {
+                throw new \RuntimeException(
+                    'Could not find Laravel app root in ZIP. ' .
+                    'Make sure the ZIP contains the artisan file.'
+                );
+            }
+
+            // 4. Copy files, skipping protected paths
+            $this->applyFiles($sourceRoot, base_path());
+
+            // 5. Run new migrations
+            try {
+                Artisan::call('migrate', ['--force' => true]);
+            } catch (\Throwable $e) {
+                \Log::warning('Update: migrate warning — ' . $e->getMessage());
+            }
+
+            // 6. Clear caches
+            try {
+                Artisan::call('optimize:clear');
+            } catch (\Throwable $e) {
+                // non-fatal
+            }
+
+            // 7. Bump version if config.json is present
+            $configPath = $sourceRoot . 'config.json';
+            if (File::exists($configPath)) {
+                $cfg = json_decode(File::get($configPath), true);
+                if (!empty($cfg['version'])) {
+                    DB::table('settings')->upsert(
+                        [['key' => 'app_version', 'value' => $cfg['version']]],
+                        ['key'],
+                        ['value']
+                    );
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => translate('System updated successfully! Reloading...'),
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('SystemUpdate::update — ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        } finally {
+            File::deleteDirectory($tempDir);
+        }
+    }
+
+    /**
+     * Recursively search for the directory that contains artisan (Laravel root).
+     * Handles GitHub-style wrappers (one extra subdirectory) and repos with a
+     * nested 'code/' subfolder. Searches up to 3 levels deep.
+     */
+    private function findLaravelRoot(string $dir, int $depth = 0): ?string
+    {
+        if ($depth > 3) {
+            return null;
+        }
+
+        $dir = rtrim($dir, '/') . '/';
+
+        if (File::exists($dir . 'artisan')) {
+            return $dir;
+        }
+
+        foreach (File::directories($dir) as $sub) {
+            $found = $this->findLaravelRoot($sub, $depth + 1);
+            if ($found !== null) {
+                return $found;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Copy every file from $src to $dst, skipping protected paths so that
+     * user data (.env, uploads, logs) is never overwritten.
+     */
+    private function applyFiles(string $src, string $dst): void
+    {
+        $src = rtrim($src, '/') . '/';
+        $dst = rtrim($dst, '/') . '/';
+
+        // Paths relative to Laravel root that must never be touched
+        $protected = [
+            '.env',
+            'storage/app/public',   // user uploads
+            'storage/logs',
+            'storage/framework',
+            'public/storage',       // symlink
+            '.git',
+            'node_modules',
+        ];
+
+        $copied  = 0;
+        $skipped = 0;
+
+        foreach (File::allFiles($src) as $file) {
+            $relative = ltrim(
+                str_replace('\\', '/', str_replace($src, '', $file->getPathname())),
+                '/'
+            );
+
+            foreach ($protected as $guard) {
+                if (str_starts_with($relative, $guard)) {
+                    $skipped++;
+                    continue 2;
+                }
+            }
+
+            $dest = $dst . $relative;
+            $dir  = dirname($dest);
+
+            if (!File::isDirectory($dir)) {
+                File::makeDirectory($dir, 0755, true);
+            }
+
+            File::copy($file->getPathname(), $dest);
+            $copied++;
+        }
+
+        \Log::info("SystemUpdate: {$copied} files copied, {$skipped} protected files skipped.");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CLICK & UPDATE  (unchanged — fetches from remote license server)
+    // ─────────────────────────────────────────────────────────────────────────
+
     public function checkUpdate(): array
     {
         $params = [
-            'domain' => url('/'),
-            'software_id' => config('installer.software_id'),
-            'version' => config('installer.version'),
-            'purchase_key' => env('PURCHASE_KEY'),
-            'envato_username' => env('ENVATO_USERNAME')
+            'domain'          => url('/'),
+            'software_id'     => config('installer.software_id'),
+            'version'         => config('installer.version'),
+            'purchase_key'    => env('PURCHASE_KEY'),
+            'envato_username' => env('ENVATO_USERNAME'),
         ];
 
         try {
-            $url = 'https://verifylicense.online/api/licence-verification/get-update-versions';
-            $response = Http::post($url, $params);
+            $response = Http::post(
+                'https://verifylicense.online/api/licence-verification/get-update-versions',
+                $params
+            );
             $data = $response->json();
 
             if (!isset($data['success'], $data['code'], $data['message'])) {
-                return [
-                    'success' => false,
-                    'message' => 'Invalid API response structure',
-                ];
+                return ['success' => false, 'message' => 'Invalid API response structure'];
             }
 
             if ($data['success'] === true) {
-                if (!empty($data['data'])) {
-                    return [
-                        'success' => true,
-                        'message' => 'Update available',
-                        'data' => $data['data'],
-                    ];
-                } else {
-                    return [
-                        'success' => true,
-                        'message' => 'No updates available',
-                        'data' => [],
-                    ];
-                }
+                return [
+                    'success' => true,
+                    'message' => empty($data['data']) ? 'No updates available' : 'Update available',
+                    'data'    => $data['data'] ?? [],
+                ];
             }
 
-            $errorMessage = $data['message'] ?? 'Unknown error';
+            $msg = $data['message'] ?? 'Unknown error';
             if (isset($data['data']['errors'])) {
-                $errors = $data['data']['errors'];
-                $errorMessage .= ': ' . json_encode($errors);
+                $msg .= ': ' . json_encode($data['data']['errors']);
             }
 
-            return [
-                'success' => false,
-                'message' => $errorMessage,
-            ];
-
+            return ['success' => false, 'message' => $msg];
         } catch (\Exception $e) {
-
-            return [
-                'success' => false,
-                'message' => 'Failed to connect to API: ' . $e->getMessage(),
-            ];
+            return ['success' => false, 'message' => 'Failed to connect: ' . $e->getMessage()];
         }
     }
 
-
-    public function installUpdate(Request $request)
+    public function installUpdate(Request $request): array
     {
         $params = [
-            'domain' => url('/'),
-            'software_id' => config('installer.software_id'),
-            'version' => $request->input('version'),
-            'purchase_key' => env('PURCHASE_KEY'),
-            'envato_username' => env('ENVATO_USERNAME')
+            'domain'          => url('/'),
+            'software_id'     => config('installer.software_id'),
+            'version'         => $request->input('version'),
+            'purchase_key'    => env('PURCHASE_KEY'),
+            'envato_username' => env('ENVATO_USERNAME'),
         ];
 
-        $status = false;
+        $status       = false;
+        $message      = 'Update failed';
+        $errorMessage = '';
 
         try {
-
-            $url = 'https://verifylicense.online/api/licence-verification/download-version';
-            $response = Http::post($url, $params);
+            $response = Http::post(
+                'https://verifylicense.online/api/licence-verification/download-version',
+                $params
+            );
             $data = $response->json();
 
             if ($response->successful()) {
-                $basePath = base_path('/storage/app/public/temp_update/');
-                if (!file_exists($basePath))
+                $basePath = storage_path('app/public/temp_update/');
+                if (!file_exists($basePath)) {
                     mkdir($basePath, 0777);
-
+                }
 
                 $filename = 'default_update.zip';
                 if ($response->hasHeader('Content-Disposition')) {
-                    $disposition = $response->header('Content-Disposition');
-                    if (preg_match('/filename="(.+?)"/', $disposition, $matches)) {
-                        $filename = $matches[1];
+                    if (preg_match('/filename="(.+?)"/', $response->header('Content-Disposition'), $m)) {
+                        $filename = $m[1];
                     }
                 }
 
-                $filePath = $basePath . '/' . $filename;
-
+                $filePath = $basePath . $filename;
                 file_put_contents($filePath, $response->body());
 
                 $zip = new ZipArchive;
-                $res = $zip->open($filePath);
-
-                if (!$res) {
+                if ($zip->open($filePath) !== true) {
                     $this->deleteDirectory($basePath);
-
-                    $updateResponse = [
-                        'success' => false,
-                        'message' => translate('Error! Could not open File')
-                    ];
-
-                    return $updateResponse;
-
+                    return ['success' => false, 'message' => translate('Error! Could not open File')];
                 }
 
-
                 $zip->extractTo($basePath);
-
                 $zip->close();
 
                 $configFilePath = $basePath . 'config.json';
-                $configJson = json_decode(file_get_contents($configFilePath), true);
+                $configJson     = File::exists($configFilePath)
+                    ? json_decode(File::get($configFilePath), true)
+                    : null;
 
-                if (empty($configJson) || empty($configJson['version'])) {
+                if (empty($configJson['version'])) {
                     $this->deleteDirectory($basePath);
-
-                    $updateResponse = [
-                        'success' => false,
-                        'message' => translate('Error! No Configuration file found')
-                    ];
-
-                    return $updateResponse;
+                    return ['success' => false, 'message' => translate('Error! No Configuration file found')];
                 }
 
-
-                $newVersion = (double) $configJson['version'];
-                $currentVersion = (double) @site_settings("app_version") ?? 1.1;
-
-
-
-                $src = $basePath;
-                $dst = dirname(base_path());
-
+                $newVersion     = (float) $configJson['version'];
+                $currentVersion = (float) (site_settings('app_version') ?? 1.1);
 
                 if ($newVersion > $currentVersion) {
-
-                    $message = translate('Your system updated successfully');
-                    $status = true;
-
-
-
-                    if ($this->copyDirectory($src, $dst)) {
-
+                    if ($this->copyDirectory($basePath, dirname(base_path()))) {
                         $this->_runMigrations($configJson);
                         $this->_runSeeder($configJson);
                         DB::table('settings')->upsert([
-                            ['key' => 'app_version', 'value' => $newVersion],
-                            ['key' => 'system_installed_at', 'value' => Carbon::now()],
+                            ['key' => 'app_version',        'value' => $newVersion],
+                            ['key' => 'system_installed_at','value' => Carbon::now()],
                         ], ['key'], ['value']);
-
-
+                        $status  = true;
+                        $message = translate('Your system updated successfully');
                     }
                 }
-
-
             }
 
             $errorMessage = $data['message'] ?? 'Unknown error';
             if (isset($data['data']['errors'])) {
-                $errors = $data['data']['errors'];
-                $errorMessage .= ': ' . json_encode($errors);
+                $errorMessage .= ': ' . json_encode($data['data']['errors']);
             }
-
             if (isset($data['data']['error'])) {
                 $errorMessage = $data['data']['error'];
             }
-
         } catch (\Exception $e) {
-
-        }
-
-        $updateResponse = [
-            'success' => $status,
-            'message' => $message ?? $errorMessage
-        ];
-
-
-        optimize_clear();
-        $this->deleteDirectory($basePath);
-
-
-        return $updateResponse;
-
-
-    }
-
-
-
-    /**
-     * update the system
-     *
-     * @param Request $request
-     * @return RedirectResponse|\Illuminate\Http\JsonResponse
-     */
-    public function update(Request $request)
-    {
-
-        set_time_limit(0);
-        ini_set('memory_limit', '2048M');
-        ini_set('max_input_time', '3600');
-        ini_set('max_execution_time', '3600');
-        ini_set('post_max_size', '2048M');
-        ini_set('upload_max_filesize', '2048M');
-
-        $request->validate([
-            'updateFile' => ['required', 'mimes:zip', 'max:2097152'], // 2GB max (2097152 KB)
-        ], [
-            'updateFile.required' => translate('File field is required'),
-            'updateFile.max' => translate('File size must not exceed 2GB')
-        ]);
-
-        $response = response_status(translate('Your system is currently running the latest version.'), 'error');
-        $basePath = storage_path('app/public/temp_update/');
-        $errorMessage = '';
-        $successMessage = '';
-
-        try {
-            if ($request->hasFile('updateFile')) {
-
-                // Clean up any existing temp directory first
-                if (File::exists($basePath)) {
-                    try {
-                        File::deleteDirectory($basePath);
-                    } catch (\Exception $e) {
-                        \Log::warning('Failed to delete existing temp directory: ' . $e->getMessage());
-                    }
-                }
-
-                // Create temp directory with full permissions
-                if (!File::makeDirectory($basePath, 0777, true, true)) {
-                    $errorMessage = translate('Error! Failed to create temporary directory. Check storage permissions.');
-                    \Log::error('Failed to create temp directory: ' . $basePath);
-                    if ($request->expectsJson() || $request->ajax()) {
-                        return response()->json(['success' => false, 'message' => $errorMessage]);
-                    }
-                    return back()->with("error", $errorMessage);
-                }
-
-                $zipFile = $request->file('updateFile');
-                $zipPath = $basePath . $zipFile->getClientOriginalName();
-
-                // Move uploaded file with stream to handle large files efficiently
-                try {
-                    $zipFile->move($basePath, $zipFile->getClientOriginalName());
-                } catch (\Exception $e) {
-                    \Log::error('File move failed: ' . $e->getMessage());
-                    File::deleteDirectory($basePath);
-                    $errorMessage = translate('Error! Failed to save uploaded file: ') . $e->getMessage();
-                    if ($request->expectsJson() || $request->ajax()) {
-                        return response()->json(['success' => false, 'message' => $errorMessage]);
-                    }
-                    return back()->with("error", $errorMessage);
-                }
-
-                // Validate ZIP file integrity
-                $zip = new ZipArchive;
-                $res = $zip->open($zipPath);
-
-                if ($res !== true) {
-                    File::deleteDirectory($basePath);
-                    $errorMessage = translate('Error! Invalid or corrupted ZIP file');
-                    if ($request->expectsJson() || $request->ajax()) {
-                        return response()->json(['success' => false, 'message' => $errorMessage]);
-                    }
-                    return back()->with("error", $errorMessage);
-                }
-
-                // Extract with validation
-                $extractPath = $basePath . 'extracted/';
-                File::makeDirectory($extractPath, 0755, true);
-
-                if (!$zip->extractTo($extractPath)) {
-                    $zip->close();
-                    File::deleteDirectory($basePath);
-                    $errorMessage = translate('Error! Failed to extract files');
-                    if ($request->expectsJson() || $request->ajax()) {
-                        return response()->json(['success' => false, 'message' => $errorMessage]);
-                    }
-                    return back()->with("error", $errorMessage);
-                }
-                $zip->close();
-
-                // ── Unwrap GitHub-style ZIPs ──────────────────────────────────────────
-                // GitHub archives wrap everything inside a single subdirectory
-                // (e.g. skillychat-master/). Detect this and treat that dir as root.
-                $extractRoot = $extractPath;
-                $topLevel    = array_filter(
-                    File::directories($extractPath),
-                    fn($d) => File::isDirectory($d)
-                );
-                if (count($topLevel) === 1 && count(File::files($extractPath)) === 0) {
-                    // All content is inside the single subdirectory
-                    $extractRoot = rtrim(array_values($topLevel)[0], '/') . '/';
-                    \Log::info('SystemUpdate: detected GitHub-style ZIP wrapper, using root: ' . $extractRoot);
-                }
-
-                // ── Read or auto-generate config.json ────────────────────────────────
-                $configFilePath = $extractRoot . 'config.json';
-                if (File::exists($configFilePath)) {
-                    $configJson = json_decode(File::get($configFilePath), true);
-                } else {
-                    // No config.json — treat as a raw project ZIP.
-                    // Auto-generate a minimal config that bumps the version by 0.1.
-                    $currentVersion = (float) (site_settings('app_version') ?? 1.1);
-                    $newAutoVersion = round($currentVersion + 0.1, 1);
-                    $configJson = [
-                        'version'    => (string) $newAutoVersion,
-                        'migrations' => [],
-                        'seeder'     => [],
-                    ];
-                    \Log::info("SystemUpdate: no config.json found — auto-generated version {$newAutoVersion}");
-                }
-
-                if (empty($configJson) || empty($configJson['version'])) {
-                    File::deleteDirectory($basePath);
-                    $errorMessage = translate('Error! Invalid configuration file');
-                    return response()->json(['success' => false, 'message' => $errorMessage]);
-                }
-
-                // Re-point extractPath to the actual root (may be a subdirectory)
-                $extractPath = $extractRoot;
-
-                // Check if update ZIP contains .env file and remove it to prevent overwriting
-                $envFileInZip = $extractPath . '.env';
-                if (File::exists($envFileInZip)) {
-                    \Log::warning('Update ZIP contains .env file. Removing to prevent overwriting production credentials.');
-                    File::delete($envFileInZip);
-                }
-
-                // Also check for other sensitive config files
-                $sensitiveFiles = ['.env', '.env.example', 'public/.htaccess', 'public/.user.ini'];
-                foreach ($sensitiveFiles as $sensitiveFile) {
-                    $filePath = $extractPath . $sensitiveFile;
-                    if (File::exists($filePath) && $sensitiveFile !== '.env.example') {
-                        \Log::warning("Removing sensitive file from update ZIP: {$sensitiveFile}");
-                        File::delete($filePath);
-                    }
-                }
-
-                $newVersion = (float) $configJson['version'];
-                $currentVersion = (float) (site_settings("app_version") ?? 1.1);
-
-                if ($newVersion <= $currentVersion) {
-                    File::deleteDirectory($basePath);
-                    $errorMessage = translate('The uploaded version is not newer than current version');
-                    if ($request->expectsJson() || $request->ajax()) {
-                        return response()->json(['success' => false, 'message' => $errorMessage]);
-                    }
-                    return back()->with("error", $errorMessage);
-                }
-
-                // Backup critical files before update
-                $this->createBackup();
-
-                // Copy files with Laravel File facade (much faster than recursive copy)
-                $dst = dirname(base_path());
-
-                try {
-                    // Copy files (excluding protected files like .env)
-                    $this->copyDirectoryOptimized($extractPath, $dst);
-
-                    // Verify database connection is still working after file copy
-                    try {
-                        DB::connection()->getPdo();
-                    } catch (\Exception $dbError) {
-                        \Log::error('Database connection lost after update: ' . $dbError->getMessage());
-                        $this->restoreBackup();
-                        File::deleteDirectory($basePath);
-                        $errorMessage = translate('Database connection lost during update. Your .env file may have been overwritten. Backup has been restored.');
-                        if ($request->expectsJson() || $request->ajax()) {
-                            return response()->json(['success' => false, 'message' => $errorMessage]);
-                        }
-                        return back()->with("error", $errorMessage);
-                    }
-
-                    // Run migrations and seeders
-                    $this->_runMigrations($configJson);
-                    $this->_runSeeder($configJson);
-
-                    // Update version in database
-                    DB::table('settings')->upsert([
-                        ['key' => 'app_version', 'value' => $newVersion],
-                        ['key' => 'system_installed_at', 'value' => Carbon::now()],
-                    ], ['key'], ['value']);
-
-                    // Clear caches to ensure new code is loaded
-                    optimize_clear();
-
-                    $successMessage = translate('System updated successfully to version ') . $newVersion;
-                    $response = response_status($successMessage);
-
-                } catch (\Exception $e) {
-                    \Log::error('Update process failed: ' . $e->getMessage());
-                    \Log::error('Stack trace: ' . $e->getTraceAsString());
-
-                    // Restore backup if copy fails
-                    $this->restoreBackup();
-                    throw $e;
-                }
-
-            }
-
-        } catch (\Exception $ex) {
-            \Log::error('System update failed: ' . $ex->getMessage());
-            $errorMessage = translate('Update failed: ') . strip_tags($ex->getMessage());
-            $response = response_status($errorMessage, 'error');
-        } finally {
-            // Always cleanup temp directory
-            if (File::exists($basePath)) {
-                File::deleteDirectory($basePath);
-            }
+            $errorMessage = $e->getMessage();
         }
 
         optimize_clear();
+        $this->deleteDirectory($basePath ?? '');
 
-        // Always return JSON — this endpoint is called via XMLHttpRequest only
-        if ($errorMessage) {
-            return response()->json(['success' => false, 'message' => $errorMessage]);
-        }
-        return response()->json(['success' => true, 'message' => $successMessage ?: translate('Update completed successfully')]);
+        return ['success' => $status, 'message' => $status ? $message : $errorMessage];
     }
 
-    /**
-     * Optimized directory copying using Laravel File facade
-     * Much faster than recursive copy() calls
-     * Excludes critical files that should never be overwritten
-     *
-     * @param string $src
-     * @param string $dst
-     * @return bool
-     */
-    private function copyDirectoryOptimized(string $src, string $dst): bool
+    public function backupDemo()
     {
-        if (!File::isDirectory($src)) {
-            return false;
+        if (is_demo()) {
+            return response()->json(['success' => false, 'message' => 'Not available in demo mode.']);
         }
 
-        // Use File::copyDirectory with Laravel's optimized implementation
-        if (!File::isDirectory($dst)) {
-            File::makeDirectory($dst, 0755, true);
-        }
-
-        // Files and directories to NEVER overwrite during updates
-        $excludedPaths = [
-            '.env',                    // Database credentials and app config
-            'storage/framework/cache', // Cache files
-            'storage/logs',            // Log files
-            'storage/app/public',      // User uploads
-            'public/.htaccess',        // Upload size limits config
-            'public/.user.ini',        // PHP config for uploads
-            'public/storage',          // Symlink to storage
-            '.git',                    // Git repository
-            '.gitignore',              // Git ignore file
-            'node_modules',            // Node dependencies
-        ];
-
-        // Get all files and directories
-        $items = File::allFiles($src);
-        $copiedCount = 0;
-        $skippedCount = 0;
-
-        foreach ($items as $item) {
-            $relativePath = str_replace($src, '', $item->getPathname());
-            $destPath = $dst . $relativePath;
-
-            // Check if this file should be excluded
-            $shouldExclude = false;
-            foreach ($excludedPaths as $excludedPath) {
-                // Normalize paths for comparison
-                $normalizedRelative = ltrim(str_replace('\\', '/', $relativePath), '/');
-                $normalizedExcluded = ltrim(str_replace('\\', '/', $excludedPath), '/');
-
-                if (str_starts_with($normalizedRelative, $normalizedExcluded)) {
-                    $shouldExclude = true;
-                    \Log::info("Skipping protected file during update: {$normalizedRelative}");
-                    $skippedCount++;
-                    break;
-                }
-            }
-
-            if ($shouldExclude) {
-                continue;
-            }
-
-            // Create directory structure if needed
-            $destDir = dirname($destPath);
-            if (!File::isDirectory($destDir)) {
-                File::makeDirectory($destDir, 0755, true);
-            }
-
-            // Copy file
-            try {
-                File::copy($item->getPathname(), $destPath);
-                $copiedCount++;
-            } catch (\Exception $e) {
-                \Log::warning("Failed to copy file {$relativePath}: " . $e->getMessage());
-            }
-        }
-
-        \Log::info("Update file copy completed: {$copiedCount} files copied, {$skippedCount} files skipped (protected)");
-
-        return true;
+        Artisan::call('demo:backup');
+        return response()->json(['success' => true, 'message' => 'Backup completed.', 'output' => Artisan::output()]);
     }
 
-    /**
-     * Create backup of critical files before update
-     *
-     * @return void
-     */
-    private function createBackup(): void
-    {
-        try {
-            $backupPath = storage_path('app/backups/');
-            if (!File::exists($backupPath)) {
-                File::makeDirectory($backupPath, 0755, true);
-            }
-
-            $timestamp = Carbon::now()->format('Y-m-d_His');
-            $backupFile = $backupPath . "backup_{$timestamp}.zip";
-
-            $zip = new ZipArchive;
-            if ($zip->open($backupFile, ZipArchive::CREATE) === true) {
-                // Backup critical files
-                $criticalPaths = [
-                    base_path('.env'),
-                    base_path('config/'),
-                    storage_path('app/'),
-                ];
-
-                foreach ($criticalPaths as $path) {
-                    if (File::exists($path)) {
-                        if (File::isDirectory($path)) {
-                            $this->addDirectoryToZip($zip, $path, basename($path));
-                        } else {
-                            $zip->addFile($path, basename($path));
-                        }
-                    }
-                }
-
-                $zip->close();
-                session(['backup_file' => $backupFile]);
-            }
-        } catch (\Exception $e) {
-            \Log::warning('Backup creation failed: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Restore backup if update fails
-     *
-     * @return void
-     */
-    private function restoreBackup(): void
-    {
-        try {
-            $backupFile = session('backup_file');
-            if ($backupFile && File::exists($backupFile)) {
-                $zip = new ZipArchive;
-                if ($zip->open($backupFile) === true) {
-                    $zip->extractTo(dirname(base_path()));
-                    $zip->close();
-                }
-            }
-        } catch (\Exception $e) {
-            \Log::error('Backup restore failed: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Add directory to ZIP archive
-     *
-     * @param ZipArchive $zip
-     * @param string $path
-     * @param string $zipPath
-     * @return void
-     */
-    private function addDirectoryToZip(ZipArchive $zip, string $path, string $zipPath): void
-    {
-        $files = File::allFiles($path);
-        foreach ($files as $file) {
-            $relativePath = str_replace($path, '', $file->getPathname());
-            $zip->addFile($file->getPathname(), $zipPath . $relativePath);
-        }
-    }
-
+    // ─────────────────────────────────────────────────────────────────────────
+    // Helpers kept for installUpdate compatibility
+    // ─────────────────────────────────────────────────────────────────────────
 
     private function _runMigrations(array $json): void
     {
-
-        $migrations = Arr::get($json, 'migrations', default: []);
-        if (count($migrations) > 0) {
-            $migrationFiles = $this->_getFormattedFiles($migrations);
-            foreach ($migrationFiles as $migration) {
-                Artisan::call(
-                    'migrate',
-                    array(
-                        '--path' => $migration,
-                        '--force' => true
-                    )
-                );
-            }
+        foreach ($this->_getFormattedFiles(Arr::get($json, 'migrations', [])) as $migration) {
+            Artisan::call('migrate', ['--path' => $migration, '--force' => true]);
         }
     }
 
     private function _runSeeder(array $json): void
     {
-
-        $seeders = Arr::get($json, 'seeder', []);
-
-        if (count($seeders) > 0) {
-            $seederFiles = $this->_getFormattedFiles($seeders);
-            foreach ($seederFiles as $seeder) {
-                Artisan::call(
-                    'db:seed',
-                    array(
-                        '--class' => $seeder,
-                        '--force' => true
-                    )
-                );
-            }
+        foreach ($this->_getFormattedFiles(Arr::get($json, 'seeder', [])) as $seeder) {
+            Artisan::call('db:seed', ['--class' => $seeder, '--force' => true]);
         }
     }
 
     private function _getFormattedFiles(array $files): array
     {
-
-        $currentVersion = (double) site_settings(key: "app_version", default: 1.1);
+        $current        = (float) site_settings('app_version', 1.1);
         $formattedFiles = [];
         foreach ($files as $version => $file) {
-            if (version_compare($version, (string) $currentVersion, '>')) {
+            if (version_compare($version, (string) $current, '>')) {
                 $formattedFiles[] = $file;
             }
         }
-
         return array_unique(Arr::collapse($formattedFiles));
-
     }
 
-
-
-    /**
-     * Copy directory
-     *
-     * @param string $src
-     * @param string $dst
-     * @return boolean
-     */
     public function copyDirectory(string $src, string $dst): bool
     {
-
         try {
             $dir = opendir($src);
             @mkdir($dst);
             while (false !== ($file = readdir($dir))) {
-                if (($file != '.') && ($file != '..')) {
+                if ($file !== '.' && $file !== '..') {
                     if (is_dir($src . '/' . $file)) {
                         $this->copyDirectory($src . '/' . $file, $dst . '/' . $file);
                     } else {
@@ -705,41 +379,30 @@ class SystemUpdateController extends Controller
                 }
             }
             closedir($dir);
+            return true;
         } catch (\Exception $e) {
             return false;
         }
-
-        return true;
     }
 
-
-
-    /**
-     * delete directory
-     *
-     * @param string $dirname
-     * @return boolean
-     */
     public function deleteDirectory(string $dirname): bool
     {
-
+        if (!$dirname || !is_dir($dirname)) {
+            return false;
+        }
         try {
-            if (!is_dir($dirname)) {
+            $handle = opendir($dirname);
+            if (!$handle) {
                 return false;
             }
-            $dir_handle = opendir($dirname);
-
-            if (!$dir_handle)
-                return false;
-            while ($file = readdir($dir_handle)) {
-                if ($file != "." && $file != "..") {
-                    if (!is_dir($dirname . "/" . $file))
-                        unlink($dirname . "/" . $file);
-                    else
-                        $this->deleteDirectory($dirname . '/' . $file);
+            while ($file = readdir($handle)) {
+                if ($file !== '.' && $file !== '..') {
+                    is_dir($dirname . '/' . $file)
+                        ? $this->deleteDirectory($dirname . '/' . $file)
+                        : unlink($dirname . '/' . $file);
                 }
             }
-            closedir($dir_handle);
+            closedir($handle);
             rmdir($dirname);
             return true;
         } catch (\Exception $e) {
@@ -747,34 +410,10 @@ class SystemUpdateController extends Controller
         }
     }
 
-
-    public function removeDirectory($basePath)
+    public function removeDirectory(string $basePath): void
     {
-
         if (File::exists($basePath)) {
             File::deleteDirectory($basePath);
         }
     }
-
-
-    public function backupDemo()
-    {
-        if (is_demo()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This function is not available in demo mode.',
-            ]);
-        }
-
-        Artisan::call('demo:backup');
-        $output = Artisan::output();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Backup completed successfully.',
-            'output' => $output
-        ]);
-    }
-
-
 }

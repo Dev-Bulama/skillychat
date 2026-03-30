@@ -1,948 +1,302 @@
 @extends('admin.layouts.master')
-@section('content')
 
 @push('style-include')
-<style nonce="{{csp_nonce()}}">
-    /* Reset and base styles */
-    .update-container * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-
-    /* Upload Progress Indicator */
-    .upload-progress-container {
-        display: none;
-        margin: 20px 0;
-        padding: 20px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        border: 1px solid #e1e8ed;
-    }
-
-    .upload-progress-container.active {
-        display: block;
-    }
-
-    .upload-progress-info {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 10px;
-        font-size: 14px;
-        color: #4a5568;
-    }
-
-    .upload-progress-bar-container {
-        width: 100%;
-        height: 30px;
-        background: #e1e8ed;
-        border-radius: 15px;
-        overflow: hidden;
-        position: relative;
-        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .upload-progress-bar {
-        height: 100%;
-        width: var(--progress-width, 0%);
-        background: linear-gradient(90deg, #4299e1 0%, #3182ce 100%);
-        border-radius: 15px;
-        transition: width 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: 600;
-        font-size: 13px;
-        box-shadow: 0 2px 4px rgba(66, 153, 225, 0.4);
-    }
-
-    .upload-progress-bar.complete {
-        background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-    }
-
-    .upload-progress-bar.error {
-        background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
-    }
-
-    .upload-status-text {
-        margin-top: 10px;
-        text-align: center;
-        font-size: 13px;
-        color: #4a5568;
-        font-weight: 500;
-    }
-
-    .upload-status-text i {
-        margin-right: 6px;
-    }
-
-    .upload-spinner {
-        display: inline-block;
-        width: 14px;
-        height: 14px;
-        border: 2px solid rgba(66, 153, 225, 0.3);
-        border-radius: 50%;
-        border-top-color: #4299e1;
-        animation: spin 1s ease-in-out infinite;
-        margin-right: 8px;
-    }
-
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
-
-    .update-container {
-        background-color: #ffffff;
-        border-radius: 8px;
-        width: 100%;
-        max-width: 100%;
-        padding: 20px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    }
-
-    h1 {
-        font-size: 22px;
-        margin-bottom: 15px;
-        font-weight: 700;
-        color: #2d3748;
-        text-align: center;
-    }
-
-    /* Tab navigation styles */
-    .tab-nav {
-        display: flex;
-        background-color: #f9fafb;
-        border-radius: 8px;
-        padding: 8px;
-        margin-bottom: 24px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-
-    .tab-link {
-        flex: 1;
-        padding: 12px 16px;
-        font-size: 17px;
-        font-weight: 600;
-        color: #4a5568;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        border-radius: 6px;
-        position: relative;
-    }
-
-    .tab-link:hover {
-        background-color: #e2e8f0;
-        color: #2d3748;
-    }
-
-    .tab-link.active {
-        background-color: #ffffff;
-        color: #4299e1;
-        box-shadow: 0 2px 4px rgba(66, 153, 225, 0.1);
-    }
-
-    .tab-link.active::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 40%;
-        height: 3px;
-        background-color: #4299e1;
-        border-radius: 2px;
-        transition: all 0.3s ease;
-    }
-
-    .tab-content {
-        display: none;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-
-    .tab-content.active {
-        display: block;
-        opacity: 1;
-    }
-
-    .update-status {
-        margin-top: 15px;
-        padding: 12px;
-        border-radius: 5px;
-        font-size: 14px;
-        display: none;
-        text-align: center;
-    }
-
-    .update-status.checking {
-        display: block;
-        background-color: #ebf8ff;
-        color: #2b6cb0;
-    }
-
-    .update-status.available {
-        display: block;
-        background-color: #f0fff4;
-        color: #276749;
-    }
-
-    .update-status.none {
-        display: block;
-        background-color: #fff5f5;
-        color: #c53030;
-    }
-
-    .available-update-list {
-        margin-top: 15px;
-        display: none;
-        flex-direction: column;
-        gap: 24px;
-    }
-
-    .available-update-list.show {
-        display: flex;
-    }
-
-    .update-card {
-        background-color: #ffffff;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
-        transition: all 0.2s ease;
-        border: 1px solid rgba(0, 0, 0, 0.05);
-    }
-
-    .update-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    }
-
-    .update-content {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .update-info {
-        flex: 1;
-        padding: 32px;
-    }
-
-    .update-header {
-        margin-bottom: 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .update-version {
-        font-size: 20px;
-        font-weight: 700;
-        color: #2d3748;
-        letter-spacing: -0.025em;
-        display: flex;
-        align-items: center;
-    }
-
-    .update-version::after {
-        content: "";
-        display: inline-block;
-        width: 6px;
-        height: 6px;
-        background-color: #4299e1;
-        border-radius: 50%;
-        margin-left: 16px;
-        margin-right: 16px;
-    }
-
-    .update-date {
-        font-size: 15px;
-        color: #718096;
-        font-weight: 500;
-    }
-
-    .update-notes {
-        font-size: 15px;
-        color: #718096;
-        line-height: 1.7;
-    }
-
-    .update-action {
-        padding: 24px;
-        background: linear-gradient(to right, rgba(249, 250, 251, 0.5), rgba(249, 250, 251, 0.8));
-        display: flex;
-        justify-content: center;
-        gap: 16px;
-        border-top: 1px solid rgba(0, 0, 0, 0.03);
-    }
-
-    .download-button {
-        background-color: #4299e1;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 10px 18px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 6px -1px rgba(66, 153, 225, 0.2), 0 2px 4px -1px rgba(66, 153, 225, 0.1);
-    }
-
-    .download-button:hover {
-        background-color: #3182ce;
-        transform: translateY(-1px);
-        box-shadow: 0 6px 10px -1px rgba(66, 153, 225, 0.3), 0 4px 6px -2px rgba(66, 153, 225, 0.15);
-    }
-
-    .download-button.disabled-button {
-        background-color: #d1d5db;
-        color: #6b7280;
-        cursor: not-allowed;
-        box-shadow: none;
-        transform: none;
-    }
-
-    .download-button.disabled-button:hover {
-        background-color: #d1d5db;
-        transform: none;
-        box-shadow: none;
-    }
-
-    .changelog-button {
-        background-color: transparent;
-        color: #4299e1;
-        border: 2px solid #4299e1;
-        border-radius: 8px;
-        padding: 8px 18px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        transition: all 0.2s ease;
-    }
-
-    .changelog-button:hover {
-        background-color: #ebf8ff;
-        color: #3182ce;
-        border-color: #3182ce;
-        transform: translateY(-1px);
-    }
-
-    .download-icon,
-    .changelog-icon {
-        margin-right: 16px;
-        width: 18px;
-        height: 18px;
-    }
-
-    .spinner {
-        display: inline-block;
-        width: 14px;
-        height: 14px;
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        border-radius: 50%;
-        border-top-color: white;
-        animation: spin 1s ease-in-out infinite;
-        margin-right: 6px;
-        display: none;
-    }
-
-    @keyframes spin {
-        to {
-            transform: rotate(360deg);
-        }
-    }
-
-    .checking .spinner {
-        display: inline-block;
-    }
-
-    /* Modal styles */
-    .modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-        align-items: center;
-        justify-content: center;
-        overflow-y: auto;
-    }
-
-    .modal.active {
-        display: flex;
-    }
-
-    .modal-content {
-        background-color: #ffffff;
-        border-radius: 12px;
-        max-width: 600px;
-        width: 90%;
-        padding: 24px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        position: relative;
-        max-height: 80vh;
-        overflow-y: auto;
-    }
-
-    .modal-close {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        font-size: 20px;
-        color: #4a5568;
-        cursor: pointer;
-        transition: color 0.2s ease;
-    }
-
-    .modal-close:hover {
-        color: #2d3748;
-    }
-
-    .modal-title {
-        font-size: 20px;
-        font-weight: 700;
-        color: #2d3748;
-        margin-bottom: 16px;
-    }
-
-    .modal-body {
-        font-size: 15px;
-        color: #4a5568;
-        line-height: 1.6;
-    }
-
-    /* Responsive styles */
-    @media (min-width: 768px) {
-        .update-content {
-            flex-direction: row;
-        }
-
-        .update-header {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-        }
-
-        .update-version::after {
-            display: none;
-        }
-
-        .update-version {
-            margin-right: 16px;
-        }
-
-        .update-action {
-            display: flex;
-            align-items: center;
-            padding: 0 32px;
-            min-width: 200px;
-            border-top: none;
-            border-left: 1px solid rgba(0, 0, 0, 0.03);
-            background: linear-gradient(to left, rgba(249, 250, 251, 0.5), rgba(249, 250, 251, 0.8));
-        }
-    }
-
-    /* Responsive styles for tabs */
-    @media (max-width: 768px) {
-        .tab-nav {
-            flex-direction: column;
-            padding: 6px;
-        }
-
-        .tab-link {
-            padding: 10px 12px;
-            font-size: 16px;
-        }
-
-        .tab-link.active::after {
-            width: 60%;
-        }
-
-        .modal-content {
-            width: 95%;
-            padding: 16px;
-        }
-    }
-
-    /* Minimal Version Display */
-    .version-info {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 1rem;
-        text-align: center;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-
-    .version-label {
-        font-size: 0.75rem;
-        color: #6b7280;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        font-weight: 500;
-    }
-
-    .version-number {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: #111827;
-        margin: 0.5rem 0;
-    }
-
-    .version-date {
-        font-size: 0.8rem;
-        color: #9ca3af;
-        margin: 0;
-    }
-
-    /* Hover effect */
-    .version-info:hover {
-        border-color: #d1d5db;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Responsive */
-    @media (max-width: 480px) {
-        .version-info {
-            max-width: 100%;
-        }
-    }
-
+<style nonce="{{ csp_nonce() }}">
+.upd-card { background:#fff; border-radius:12px; padding:28px 32px; box-shadow:0 2px 12px rgba(0,0,0,.07); }
+.upd-title { font-size:1.1rem; font-weight:700; color:#1e293b; margin-bottom:4px; }
+.upd-sub   { font-size:.85rem; color:#64748b; margin-bottom:20px; }
+
+/* Drop zone */
+.upd-dropzone {
+    border:2px dashed #cbd5e1; border-radius:10px; padding:36px 20px;
+    text-align:center; cursor:pointer; transition:.2s;
+    background:#f8fafc; position:relative;
+}
+.upd-dropzone:hover, .upd-dropzone.drag { border-color:#6366f1; background:#eef2ff; }
+.upd-dropzone input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.upd-dropzone i { font-size:2.4rem; color:#94a3b8; display:block; margin-bottom:10px; }
+.upd-dropzone .dz-label { font-size:.95rem; color:#475569; }
+.upd-dropzone .dz-hint  { font-size:.78rem; color:#94a3b8; margin-top:4px; }
+.upd-dropzone .dz-file  { font-size:.9rem; color:#6366f1; font-weight:600; display:none; margin-top:8px; }
+
+/* Progress */
+.upd-progress { margin-top:18px; display:none; }
+.upd-bar-wrap  { height:8px; border-radius:4px; background:#e2e8f0; overflow:hidden; }
+.upd-bar       { height:100%; width:0; border-radius:4px; background:#6366f1; transition:width .25s ease; }
+.upd-bar.done  { background:#10b981; }
+.upd-bar.fail  { background:#ef4444; }
+.upd-pct       { font-size:.78rem; color:#64748b; margin-top:6px; text-align:right; }
+.upd-status    { font-size:.87rem; margin-top:10px; padding:10px 14px; border-radius:7px; display:none; }
+.upd-status.ok   { background:#f0fdf4; color:#166534; }
+.upd-status.fail { background:#fef2f2; color:#991b1b; }
+.upd-status.info { background:#eff6ff; color:#1e40af; }
+
+/* Buttons */
+.upd-btn { display:inline-flex; align-items:center; gap:6px; padding:10px 22px;
+           border-radius:8px; font-size:.9rem; font-weight:600; border:none; cursor:pointer;
+           transition:.15s; }
+.upd-btn-primary { background:#6366f1; color:#fff; }
+.upd-btn-primary:hover:not(:disabled) { background:#4f46e5; }
+.upd-btn-primary:disabled { opacity:.55; cursor:not-allowed; }
+
+/* Version badge */
+.upd-version { display:inline-flex; align-items:center; gap:8px;
+               background:#f1f5f9; border-radius:8px; padding:8px 16px;
+               font-size:.9rem; color:#334155; margin-bottom:20px; }
+.upd-version b { color:#1e293b; }
 </style>
 @endpush
 
-<div class="container-fluid px-0">
-    <div class="i-card-md mt-3">
-        <div class="card--header">
-            <h4 class="card-title">
-                {{trans('default.system_update_title')}}
-            </h4>
-        </div>
-        <div class="card-body">
-            <ul class="update-list">
-                @php echo (trans('default.update_note')) @endphp
-            </ul>
-        </div>
-    </div>
+@section('content')
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-xl-6 col-lg-8">
 
-    <div class="i-card-md mt-3">
-        <div class="card--header">
-            <h4 class="card-title">
-                {{translate("System Update")}}
-            </h4>
-        </div>
-        <div class="card-body">
-            <div class="update-container">
-                <div class="tab-nav">
-                    <div class="tab-link active" data-tab="manual-update">{{translate("Manual Update")}}</div>
-                    <div class="tab-link" data-tab="click-update">{{translate("Click & Update")}}</div>
+            {{-- Current version --}}
+            <div class="upd-card mb-4">
+                <div class="upd-title">{{ translate('System Update') }}</div>
+                <div class="upd-sub">{{ translate('Upload a ZIP file to apply updates. Your .env file and user uploads are never overwritten.') }}</div>
+
+                <div class="upd-version">
+                    <i class="las la-tag"></i>
+                    {{ translate('Current version') }}: <b>v{{ site_settings('app_version', '1.0') }}</b>
                 </div>
-                <div class="tab-content active" id="manual-update">
-                    <div class="version-info">
-                        <span class="version-label">{{ translate("Current Version") }}</span>
-                        <h4 class="version-number">{{ translate('V') }}{{ site_settings("app_version", 1.1) }}</h4>
-                        <p class="version-date">{{ get_date_time(site_settings("system_installed_at", \Carbon\Carbon::now())) }}</p>
+
+                <form id="updateForm" enctype="multipart/form-data">
+                    @csrf
+
+                    {{-- Drop zone --}}
+                    <div class="upd-dropzone" id="dropZone">
+                        <input type="file" name="updateFile" id="updateFile" accept=".zip">
+                        <i class="las la-cloud-upload-alt"></i>
+                        <div class="dz-label">{{ translate('Drop ZIP here or click to browse') }}</div>
+                        <div class="dz-hint">{{ translate('GitHub archives, plain project ZIPs, or patch ZIPs all accepted') }}</div>
+                        <div class="dz-file" id="dzFile"></div>
                     </div>
-                    
-                    <form action="{{route('admin.system.update')}}" method="post" enctype="multipart/form-data" id="manual-update-form">
-                        @csrf
-                        <div class="mt-4 mb-4">
-                            <label for="image" class="feedback-file">
-                                <input name="updateFile" hidden accept=".zip" type="file" id="image">
-                                <span><i class="bi bi-file-zip"></i> {{translate("Upload Zip file")}}</span>
-                            </label>
-                        </div>
 
-                        <!-- Upload Progress Indicator -->
-                        <div class="upload-progress-container" id="upload-progress">
-                            <div class="upload-progress-info">
-                                <span id="upload-file-name">{{translate("Uploading...")}}</span>
-                                <span id="upload-percentage">0%</span>
-                            </div>
-                            <div class="upload-progress-bar-container">
-                                <div class="upload-progress-bar" id="progress-bar">
-                                    <span id="progress-text">0%</span>
-                                </div>
-                            </div>
-                            <div class="upload-status-text" id="upload-status">
-                                <span class="upload-spinner"></span>
-                                <span id="status-message">{{translate("Preparing upload...")}}</span>
-                            </div>
+                    {{-- Progress --}}
+                    <div class="upd-progress" id="progressWrap">
+                        <div class="upd-bar-wrap">
+                            <div class="upd-bar" id="progressBar"></div>
                         </div>
+                        <div class="upd-pct" id="progressPct">0%</div>
+                    </div>
 
-                        <button class="i-btn btn--lg btn--primary update-btn" type="submit">
-                            {{translate("Update Now")}}
+                    {{-- Status message --}}
+                    <div class="upd-status" id="statusMsg"></div>
+
+                    {{-- Submit --}}
+                    <div class="mt-4 text-end">
+                        <button type="submit" class="upd-btn upd-btn-primary" id="submitBtn" disabled>
+                            <i class="las la-upload"></i> {{ translate('Upload & Apply Update') }}
                         </button>
-                    </form>
-                </div>
-                <div class="tab-content" id="click-update">
-                    <div class="update-status" id="updateStatus">
-                        {{translate("Checking for updates...")}}
                     </div>
-                    <div class="available-update-list" id="updateAvailableList">
-                        <!-- Update items will be dynamically inserted here -->
-                    </div>
-                </div>
+                </form>
             </div>
-            <!-- Modal for changelog -->
-            <div class="modal" id="changelogModal">
-                <div class="modal-content">
-                    <span class="modal-close">&times;</span>
-                    <h2 class="modal-title">{{translate("Changelog")}}</h2>
-                    <div class="modal-body" id="changelogContent"></div>
-                </div>
+
+            {{-- Click & Update (secondary) --}}
+            <div class="upd-card">
+                <div class="upd-title">{{ translate('Check for Updates') }}</div>
+                <div class="upd-sub">{{ translate('Automatically check and install updates from the update server (requires valid license).') }}</div>
+
+                <button class="upd-btn upd-btn-primary" id="checkBtn">
+                    <i class="las la-sync"></i> {{ translate('Check Now') }}
+                </button>
+
+                <div class="upd-status mt-3" id="checkStatus"></div>
+                <div id="updateList" class="mt-3"></div>
             </div>
+
         </div>
     </div>
 </div>
+@endsection
 
 @push('script-push')
 <script nonce="{{ csp_nonce() }}">
-    const currentAppVersion = "{{ site_settings('app_version', 1.1) }}";
+(function () {
+    'use strict';
 
-</script>
+    // ── Drop zone ──────────────────────────────────────────────────────────
+    const fileInput  = document.getElementById('updateFile');
+    const dropZone   = document.getElementById('dropZone');
+    const dzFile     = document.getElementById('dzFile');
+    const submitBtn  = document.getElementById('submitBtn');
 
-<script nonce="{{ csp_nonce() }}">
-    "use strict";
-    $(document).ready(function() {
+    function setFile(file) {
+        if (!file) return;
+        const mb = (file.size / 1024 / 1024).toFixed(2);
+        dzFile.textContent = file.name + ' (' + mb + ' MB)';
+        dzFile.style.display = 'block';
+        submitBtn.disabled = false;
+    }
 
-        const $updateStatus = $('#updateStatus');
-        const $updateList = $('#updateAvailableList');
-        const $spinner = $('#spinner');
-        const $changelogModal = $('#changelogModal');
-        const $changelogContent = $('#changelogContent');
+    fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
 
-        // Automatically trigger update check on page load
-        checkupdate();
-
-        function compareVersions(v1, v2) {
-            const v1Parts = v1.split('.').map(Number);
-            const v2Parts = v2.split('.').map(Number);
-            for (let i = 0; i < Math.max(v1Parts.length, v2Parts.length); i++) {
-                const part1 = v1Parts[i] || 0;
-                const part2 = v2Parts[i] || 0;
-                if (part1 < part2) return -1;
-                if (part1 > part2) return 1;
-            }
-            return 0;
-        }
-
-        function checkupdate() {
-            console.log('triggered');
-
-            $updateStatus.attr('class', 'update-status checking');
-            $updateStatus.text('{{translate("Checking for updates...")}}');
-            $updateList.attr('class', 'available-update-list');
-            $updateList.empty();
-            $spinner.css('display', 'inline-block');
-
-            $.ajax({
-                url: '{{ route("admin.system.check.update") }}'
-                , type: 'GET'
-                , dataType: 'json'
-                , success: function(response) {
-                    console.log(response);
-
-                    if (response.success && response.data && response.data.length > 0) {
-
-                        const currentVersion = currentAppVersion;
-
-                        // Sort updates by version number (ascending)
-                        response.data.sort((a, b) => compareVersions(a.version, b.version));
-
-                        // Find the next version
-                        let nextVersion = null;
-                        for (const update of response.data) {
-                            if (compareVersions(update.version, currentVersion) > 0) {
-                                nextVersion = update.version;
-                                break;
-                            }
-                        }
-
-                        $updateStatus.attr('class', 'update-status available');
-                        $updateStatus.text(response.data.length + ' {{translate("updates available!")}}');
-                        $updateList.attr('class', 'available-update-list show');
-                        $.each(response.data, function(index, update) {
-                            const isNextVersion = update.version === nextVersion;
-                            const disabledAttr = isNextVersion ? '' : 'disabled';
-                            const disabledClass = isNextVersion ? '' : 'disabled-button';
-                            const updateItem = $('<div>', {
-                                class: 'update-card'
-                            });
-                            updateItem.html(`
-                                <div class="update-content">
-                                    <div class="update-info">
-                                        <div class="update-header">
-                                            <span class="update-version"> V${update.version}</span>
-                                            <span class="update-date">Release date : ${update.release_date}</span>
-                                        </div>
-                                    </div>
-                                    <div class="update-action">
-                                        <button class="download-button ${disabledClass}" data-version="${update.version}" ${disabledAttr}>
-                                            <svg class="download-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                                <polyline points="7 10 12 15 17 10"></polyline>
-                                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                                            </svg>
-                                            {{translate("Download & Install")}}
-                                        </button>
-                                        <button class="changelog-button" data-changelog="${encodeURIComponent(update.changelog)}">
-                                            <svg class="changelog-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                                <polyline points="14 2 14 8 20 8"></polyline>
-                                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                                <line x1="16" y1="17" x2="8" y2="17"></line>
-                                                <polyline points="10 9 9 9 8 9"></polyline>
-                                            </svg>
-                                            {{translate("View Changelog")}}
-                                        </button>
-                                    </div>
-                                </div>
-                            `);
-                            $updateList.append(updateItem);
-                        });
-                        $('.download-button:not(.disabled-button)').on('click', function() {
-                            const $button = $(this);
-                            $button.prop('disabled', true).addClass('disabled-button');
-                            const version = $button.data('version');
-                            downloadAndInstallUpdate(version);
-                        });
-                        $('.changelog-button').on('click', function() {
-                            const changelog = decodeURIComponent($(this).data('changelog'));
-                            $changelogContent.html(changelog);
-                            $changelogModal.addClass('active');
-                        });
-                    } else {
-                        $updateStatus.attr('class', 'update-status text-success none');
-                        $updateStatus.text('{{translate("Your software is up to date.")}}');
-                    }
-                }
-                , error: function(xhr, status, error) {
-                    $updateStatus.attr('class', 'update-status none');
-                    $updateStatus.text('{{translate("Error checking for updates. Please try again later.")}}');
-                    console.error('Update check failed:', error);
-                }
-                , complete: function() {
-                    $spinner.css('display', 'none');
-                }
-            });
-        }
-
-
-        // Tab switching logic
-        $('.tab-link').on('click', function() {
-            const tabId = $(this).data('tab');
-            $('.tab-link').removeClass('active');
-            $('.tab-content').removeClass('active');
-            $(this).addClass('active');
-            $('#' + tabId).addClass('active');
-
-            if (tabId == 'click-update') {
-                checkupdate();
-            }
-        });
-
-
-
-        // Modal close logic
-        $('.modal-close, .modal').on('click', function(e) {
-            if (e.target === this) {
-                $changelogModal.removeClass('active');
-            }
-        });
-
-
-
-        function downloadAndInstallUpdate(version) {
-            $updateStatus.attr('class', 'update-status checking');
-            $updateStatus.text('{{translate("Downloading and installing update")}} ' + version + '...');
-            $.ajax({
-                url: '{{ route("admin.system.install.update") }}'
-                , type: 'POST'
-                , data: {
-                    version: version
-                    , _token: '{{ csrf_token() }}'
-                }
-                , dataType: 'json'
-                , success: function(response) {
-                    if (response.success == true) {
-                        $updateStatus.attr('class', 'update-status available');
-                        $updateStatus.text('{{translate("Update installed successfully! Refreshing page...")}}');
-                        setTimeout(function() {
-                            window.location.reload();
-                        }, 2000);
-                    } else {
-                        $updateStatus.attr('class', 'update-status none');
-                        $updateStatus.text('{{translate("Update installation failed:")}} ' + response.message);
-                    }
-                }
-                , error: function(xhr, status, error) {
-                    $updateStatus.attr('class', 'update-status none');
-                    $updateStatus.text('{{translate("Error installing update. Please try again later.")}}');
-                    console.error('Update installation failed:', error);
-                }
-            });
-        }
-
-        // Manual Update with Progress Tracking
-        const $manualUpdateForm = $('#manual-update-form');
-        const $updateButton = $('.update-btn');
-        const $uploadProgress = $('#upload-progress');
-        const $progressBar = $('#progress-bar');
-        const $progressText = $('#progress-text');
-        const $uploadPercentage = $('#upload-percentage');
-        const $uploadFileName = $('#upload-file-name');
-        const $statusMessage = $('#status-message');
-        const $fileInput = $('#image');
-
-        // Update file name display when file is selected
-        $fileInput.on('change', function() {
-            if (this.files.length > 0) {
-                const fileName = this.files[0].name;
-                const fileSize = formatFileSize(this.files[0].size);
-                $uploadFileName.text(fileName + ' (' + fileSize + ')');
-            }
-        });
-
-        // Handle form submission with AJAX and progress tracking
-        $manualUpdateForm.on('submit', function(e) {
-            e.preventDefault();
-
-            const formData = new FormData(this);
-            const file = $fileInput[0].files[0];
-
-            if (!file) {
-                alert('{{translate("Please select a file to upload")}}');
-                return;
-            }
-
-            // Show progress container and disable button
-            $uploadProgress.addClass('active');
-            $updateButton.prop('disabled', true).text('{{translate("Uploading...")}}');
-
-            const xhr = new XMLHttpRequest();
-
-            // Track upload progress
-            xhr.upload.addEventListener('progress', function(e) {
-                if (e.lengthComputable) {
-                    const percentComplete = Math.round((e.loaded / e.total) * 100);
-
-                    // Use CSS custom property instead of inline style for CSP compliance
-                    $progressBar[0].style.setProperty('--progress-width', percentComplete + '%');
-                    $progressText.text(percentComplete + '%');
-                    $uploadPercentage.text(percentComplete + '%');
-
-                    const uploadedSize = formatFileSize(e.loaded);
-                    const totalSize = formatFileSize(e.total);
-                    $statusMessage.text('{{translate("Uploading")}} ' + uploadedSize + ' / ' + totalSize);
-                }
-            });
-
-            // Handle upload completion
-            xhr.addEventListener('load', function() {
-                console.log('Upload completed. Status:', xhr.status);
-                console.log('Response:', xhr.responseText);
-
-                if (xhr.status === 200) {
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        console.log('Parsed response:', response);
-
-                        if (response.success) {
-                            $progressBar.addClass('complete');
-                            $statusMessage.html('<i class="las la-check-circle"></i> ' + (response.message || '{{translate("Upload complete! Processing update...")}}'));
-
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 2000);
-                        } else {
-                            const errorMsg = response.message || '{{translate("Upload failed")}}';
-                            console.error('Update failed:', errorMsg);
-                            handleUploadError(errorMsg);
-                        }
-                    } catch (error) {
-                        console.error('JSON parse error:', error);
-                        console.log('Response text:', xhr.responseText.substring(0, 500));
-
-                        // Check if response contains error indicators
-                        if (xhr.responseText.includes('error') || xhr.responseText.includes('Error')) {
-                            handleUploadError('{{translate("Update failed. Check server logs for details.")}}');
-                        } else {
-                            // If not JSON response, assume HTML success page
-                            $progressBar.addClass('complete');
-                            $statusMessage.html('<i class="las la-check-circle"></i> {{translate("Update complete! Redirecting...")}}');
-
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 2000);
-                        }
-                    }
-                } else if (xhr.status === 413) {
-                    handleUploadError('{{translate("File too large. Server rejected the upload.")}}');
-                } else if (xhr.status === 422) {
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        const errors = response.errors || {};
-                        const errorMsg = Object.values(errors).flat().join(', ') || response.message || '{{translate("Validation failed")}}';
-                        handleUploadError(errorMsg);
-                    } catch (e) {
-                        handleUploadError('{{translate("Validation failed")}}');
-                    }
-                } else {
-                    handleUploadError('{{translate("Server error:")}} ' + xhr.status);
-                }
-            });
-
-            // Handle upload errors
-            xhr.addEventListener('error', function() {
-                handleUploadError('{{translate("Network error. Please check your connection and try again.")}}');
-            });
-
-            // Handle upload abort
-            xhr.addEventListener('abort', function() {
-                handleUploadError('{{translate("Upload cancelled")}}');
-            });
-
-            // Send the request
-            xhr.open('POST', '{{route("admin.system.update")}}', true);
-            xhr.setRequestHeader('X-CSRF-TOKEN', '{{ csrf_token() }}');
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.send(formData);
-        });
-
-        function handleUploadError(message) {
-            $progressBar.addClass('error');
-            $statusMessage.html('<i class="las la-exclamation-circle"></i> ' + message);
-            $updateButton.prop('disabled', false).text('{{translate("Update Now")}}');
-
-            setTimeout(function() {
-                $uploadProgress.removeClass('active');
-                $progressBar.removeClass('error');
-                $progressBar[0].style.setProperty('--progress-width', '0%');
-                $progressText.text('0%');
-                $uploadPercentage.text('0%');
-            }, 5000);
-        }
-
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('drag');
+        const file = e.dataTransfer.files[0];
+        if (file && file.name.endsWith('.zip')) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            fileInput.files = dt.files;
+            setFile(file);
+        } else {
+            showStatus('{{ translate("Please drop a valid .zip file.") }}', 'fail');
         }
     });
 
+    // ── Upload & apply ────────────────────────────────────────────────────
+    const form        = document.getElementById('updateForm');
+    const progressWrap = document.getElementById('progressWrap');
+    const progressBar  = document.getElementById('progressBar');
+    const progressPct  = document.getElementById('progressPct');
+    const statusMsg    = document.getElementById('statusMsg');
+
+    function showStatus(msg, type) {
+        statusMsg.className = 'upd-status ' + type;
+        statusMsg.innerHTML = msg;
+        statusMsg.style.display = 'block';
+    }
+    function setProgress(pct) {
+        progressBar.style.width = pct + '%';
+        progressPct.textContent = pct + '%';
+    }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!fileInput.files.length) return;
+
+        submitBtn.disabled = true;
+        progressWrap.style.display = 'block';
+        statusMsg.style.display    = 'none';
+        progressBar.className      = 'upd-bar';
+        setProgress(0);
+
+        const xhr  = new XMLHttpRequest();
+        const data = new FormData(form);
+
+        xhr.upload.addEventListener('progress', ev => {
+            if (ev.lengthComputable) {
+                const pct = Math.round(ev.loaded / ev.total * 100);
+                setProgress(pct);
+                if (pct === 100) {
+                    progressPct.textContent = '{{ translate("Processing...") }}';
+                }
+            }
+        });
+
+        xhr.addEventListener('load', function () {
+            try {
+                const res = JSON.parse(xhr.responseText);
+                if (res.success) {
+                    progressBar.classList.add('done');
+                    setProgress(100);
+                    showStatus('<i class="las la-check-circle"></i> ' + res.message, 'ok');
+                    setTimeout(() => location.reload(), 2500);
+                } else {
+                    progressBar.classList.add('fail');
+                    showStatus('<i class="las la-exclamation-circle"></i> ' + res.message, 'fail');
+                    submitBtn.disabled = false;
+                }
+            } catch (_) {
+                progressBar.classList.add('fail');
+                showStatus('{{ translate("Unexpected server response. Check server logs.") }}', 'fail');
+                submitBtn.disabled = false;
+            }
+        });
+
+        xhr.addEventListener('error', () => {
+            progressBar.classList.add('fail');
+            showStatus('{{ translate("Network error. Check your connection.") }}', 'fail');
+            submitBtn.disabled = false;
+        });
+
+        xhr.open('POST', '{{ route("admin.system.update") }}', true);
+        xhr.setRequestHeader('X-CSRF-TOKEN',      '{{ csrf_token() }}');
+        xhr.setRequestHeader('X-Requested-With',  'XMLHttpRequest');
+        xhr.send(data);
+    });
+
+    // ── Click & Update ────────────────────────────────────────────────────
+    const checkBtn    = document.getElementById('checkBtn');
+    const checkStatus = document.getElementById('checkStatus');
+    const updateList  = document.getElementById('updateList');
+
+    function showCheckStatus(msg, type) {
+        checkStatus.className = 'upd-status ' + type;
+        checkStatus.innerHTML = msg;
+        checkStatus.style.display = 'block';
+    }
+
+    checkBtn.addEventListener('click', function () {
+        checkBtn.disabled = true;
+        showCheckStatus('<i class="las la-spinner la-spin"></i> {{ translate("Checking...") }}', 'info');
+        updateList.innerHTML = '';
+
+        fetch('{{ route("admin.system.check.update") }}', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(res => {
+            checkBtn.disabled = false;
+            if (res.success && res.data && res.data.length) {
+                showCheckStatus(res.data.length + ' {{ translate("update(s) available") }}', 'ok');
+                res.data.forEach(upd => {
+                    const card = document.createElement('div');
+                    card.className = 'upd-card mb-2 d-flex justify-content-between align-items-center';
+                    card.innerHTML =
+                        '<div><b>v' + upd.version + '</b> <span class="text-muted small ms-2">' + (upd.release_date || '') + '</span></div>' +
+                        '<button class="upd-btn upd-btn-primary install-btn" data-version="' + upd.version + '">' +
+                        '<i class="las la-download"></i> {{ translate("Install") }}</button>';
+                    updateList.appendChild(card);
+                });
+                document.querySelectorAll('.install-btn').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        installVersion(this.dataset.version, this);
+                    });
+                });
+            } else {
+                showCheckStatus('{{ translate("Your software is up to date.") }}', 'ok');
+            }
+        })
+        .catch(() => {
+            checkBtn.disabled = false;
+            showCheckStatus('{{ translate("Could not reach the update server.") }}', 'fail');
+        });
+    });
+
+    function installVersion(version, btn) {
+        btn.disabled = true;
+        showCheckStatus('<i class="las la-spinner la-spin"></i> {{ translate("Installing") }} v' + version + '...', 'info');
+
+        fetch('{{ route("admin.system.install.update") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type':     'application/x-www-form-urlencoded',
+                'X-CSRF-TOKEN':     '{{ csrf_token() }}',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: '_token={{ csrf_token() }}&version=' + version,
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                showCheckStatus('<i class="las la-check-circle"></i> {{ translate("Installed! Reloading...") }}', 'ok');
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                showCheckStatus('<i class="las la-exclamation-circle"></i> ' + res.message, 'fail');
+                btn.disabled = false;
+            }
+        })
+        .catch(() => {
+            showCheckStatus('{{ translate("Installation failed. Check server logs.") }}', 'fail');
+            btn.disabled = false;
+        });
+    }
+})();
 </script>
 @endpush
-
-@endsection
