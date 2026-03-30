@@ -386,6 +386,16 @@ trait InstallerManager
         ini_set('max_execution_time', 0);
         Artisan::call('migrate:fresh', ['--force' => true]);
     }
+
+    /**
+     * Safe update: run only pending migrations without wiping existing data.
+     * Preserves all users, chatbots, subscriptions, settings, etc.
+     */
+    private function _dbMigrateOnly(): void
+    {
+        ini_set('max_execution_time', 0);
+        Artisan::call('migrate', ['--force' => true]);
+    }
     private function _dbSeed() :void{
         ini_set('max_execution_time', 0);
         Artisan::call('db:seed', ['--force' => true]);
