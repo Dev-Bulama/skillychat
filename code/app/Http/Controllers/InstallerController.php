@@ -203,6 +203,25 @@ class InstallerController extends Controller
 
             $is_force = request()->input('force','0');
 
+            // force=2 → safe update: run migrate only, keep all existing data
+            if ($is_force === '2') {
+                $this->_dbMigrateOnly();
+                optimize_clear();
+
+                // Update/create admin credentials only
+                $admin = Admin::firstOrNew(['super_admin' => StatusEnum::true->status()]);
+                $admin->username        = $request->input('username');
+                $admin->name            = 'SuperAdmin';
+                $admin->email           = $request->input('email');
+                $admin->password        = Hash::make($request->input('password'));
+                $admin->email_verified_at = Carbon::now();
+                $admin->super_admin     = StatusEnum::true->status();
+                $admin->save();
+
+                $this->_systemInstalled();
+                return redirect()->route('install.setup.finished', ['verify_token' => bcrypt(base64_decode('c2V0dXBfY29tcGxldGVk'))]);
+            }
+
             if($is_force == StatusEnum::false->status() && !$this->_isDbEmpty()) {
                 return redirect()->back()
                 ->with('error','Please Empty Your database first!!');

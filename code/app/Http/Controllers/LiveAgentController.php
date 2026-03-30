@@ -53,9 +53,24 @@ class LiveAgentController extends Controller
         $chatbots = $chatbotsQuery->get();
         $chatbotIds = $chatbots->pluck('id')->toArray();
 
+        // Auto-create an agent record for the chatbot owner if none exists
+        // so they can use the live agent interface immediately
         $agent = ChatbotAgent::whereIn('chatbot_id', $chatbotIds)
             ->where('user_id', $this->user->id)
             ->first();
+
+        if (!$agent && count($chatbotIds) > 0) {
+            $agent = ChatbotAgent::create([
+                'chatbot_id'  => $chatbotIds[0],
+                'user_id'     => $this->user->id,
+                'name'        => $this->user->name ?? $this->user->username ?? 'Owner',
+                'email'       => $this->user->email,
+                'role'        => 'admin',
+                'status'      => 'online',
+                'can_takeover'=> true,
+                'auto_assign' => false,
+            ]);
+        }
 
         $activeConversations = ChatbotConversation::whereIn('chatbot_id', $chatbotIds)
             ->whereIn('status', ['human_requested', 'human_active'])

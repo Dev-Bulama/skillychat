@@ -45,16 +45,24 @@
                                     </div>
 
 
-                                    <div class="col-md-6 text-center  ">
-                                        <div class="d-flex gap-2  justify-content-center">
-                                            <button name="force" value="0" type="submit"  class="i-btn ai--btn btn--lg  btn--success btn--primary"> 
+                                    <div class="col-12 text-center">
+                                        <div class="d-flex gap-2 justify-content-center flex-wrap">
+                                            <button name="force" value="0" type="submit"  class="i-btn ai--btn btn--lg btn--success btn--primary">
                                                 {{trans('default.btn_import')}}
                                                 <i class="ms-2 bi bi-database"></i>
                                             </button>
-                                            <button name="force"  value="1" type="submit" class="i-btn  ai--btn btn--lg danger btn--primary"> 
+                                            <button name="force"  value="1" type="submit" class="i-btn ai--btn btn--lg danger btn--primary">
                                                 {{trans('default.btn_force_import')}}  <i class="ms-2 bi bi-database-down"></i>
                                             </button>
+                                            <button name="force" value="2" type="submit" class="i-btn ai--btn btn--lg btn--primary" style="background:#6366f1;border-color:#6366f1;">
+                                                <i class="bi bi-arrow-up-circle me-2"></i> Update (Keep Existing Data)
+                                            </button>
                                         </div>
+                                        <small class="text-muted d-block mt-2">
+                                            <strong>Import</strong> = fresh DB (empty DB required) &nbsp;|&nbsp;
+                                            <strong>Force Import</strong> = wipes all data &nbsp;|&nbsp;
+                                            <strong>Update</strong> = runs new migrations only, preserves all users &amp; settings
+                                        </small>
                                     </div>
 
 

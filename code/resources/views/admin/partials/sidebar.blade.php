@@ -603,6 +603,25 @@
                 </div>
             </li>
 
+            {{-- Appearance: Theme Management --}}
+            <li class="sidebar-menu-item">
+                <a class="sidebar-menu-link" data-bs-toggle="collapse" href="#appearanceTheme" role="button" aria-expanded="false" aria-controls="appearanceTheme">
+                    <span><i class="las la-paint-brush"></i></span>
+                    <p>{{ translate('Appearance') }}</p>
+                    <small><i class="las la-angle-down"></i></small>
+                </a>
+                <div class="side-menu-dropdown collapse {{ sidebar_awake(['admin.theme.*'], 'drop_down') }}" id="appearanceTheme">
+                    <ul class="sub-menu">
+                        <li class="sub-menu-item">
+                            <a class='sidebar-menu-link {{ sidebar_awake('admin.theme.index') }}' href='{{ route('admin.theme.index') }}'>
+                                <span></span>
+                                <p>{{ translate('Themes') }}</p>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
             @if (check_permission('view_blog') || check_permission('view_category'))
             <li class="sidebar-menu-item">
                 <a class="sidebar-menu-link " data-bs-toggle="collapse" href="#blog" role="button" aria-expanded="false" aria-controls="blog">

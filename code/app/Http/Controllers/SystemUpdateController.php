@@ -72,7 +72,7 @@ class SystemUpdateController extends Controller
             }
 
             // 4. Copy files, skipping protected paths
-            $this->applyFiles($sourceRoot, base_path());
+            $copyResult = $this->applyFiles($sourceRoot, base_path());
 
             // 5. Run new migrations
             try {
@@ -104,6 +104,14 @@ class SystemUpdateController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => translate('System updated successfully! Reloading...'),
+                'debug'   => [
+                    'source_root'  => $sourceRoot,
+                    'dest_root'    => base_path(),
+                    'public_path'  => public_path(),
+                    'files_copied' => $copyResult['copied'],
+                    'files_skipped'=> $copyResult['skipped'],
+                    'public_mapped'=> $copyResult['public_mapped'] ?? false,
+                ],
             ]);
         } catch (\Throwable $e) {
             \Log::error('SystemUpdate::update — ' . $e->getMessage());
@@ -143,19 +151,32 @@ class SystemUpdateController extends Controller
     /**
      * Copy every file from $src to $dst, skipping protected paths so that
      * user data (.env, uploads, logs) is never overwritten.
+     *
+     * Handles the public/ → public_path() remapping for shared hosting
+     * where Laravel's public folder is named "public_html" instead of "public".
+     *
+     * @return array{copied:int, skipped:int, public_mapped:bool}
      */
-    private function applyFiles(string $src, string $dst): void
+    private function applyFiles(string $src, string $dst): array
     {
         $src = rtrim($src, '/') . '/';
         $dst = rtrim($dst, '/') . '/';
 
+        // On shared hosting, public_path() may be .../public_html while
+        // base_path('public') is .../public. If they differ and the ZIP
+        // contains a public/ folder, redirect those files to public_path().
+        $publicPath    = rtrim(public_path(), '/') . '/';
+        $basePub       = rtrim(base_path('public'), '/') . '/';
+        $remapPublic   = ($publicPath !== $basePub) && File::isDirectory($src . 'public');
+
         // Paths relative to Laravel root that must never be touched
         $protected = [
             '.env',
-            'storage/app/public',   // user uploads
+            'storage/app/public',
             'storage/logs',
             'storage/framework',
-            'public/storage',       // symlink
+            'public/storage',
+            'public_html/storage',
             '.git',
             'node_modules',
         ];
@@ -176,9 +197,14 @@ class SystemUpdateController extends Controller
                 }
             }
 
-            $dest = $dst . $relative;
-            $dir  = dirname($dest);
+            // Remap public/ → actual public_path() when they differ
+            if ($remapPublic && str_starts_with($relative, 'public/')) {
+                $dest = $publicPath . substr($relative, 7); // 7 = strlen('public/')
+            } else {
+                $dest = $dst . $relative;
+            }
 
+            $dir = dirname($dest);
             if (!File::isDirectory($dir)) {
                 File::makeDirectory($dir, 0755, true);
             }
@@ -187,7 +213,9 @@ class SystemUpdateController extends Controller
             $copied++;
         }
 
-        \Log::info("SystemUpdate: {$copied} files copied, {$skipped} protected files skipped.");
+        \Log::info("SystemUpdate: {$copied} files copied, {$skipped} skipped. public remapped={$remapPublic}. src={$src} dst={$dst}");
+
+        return ['copied' => $copied, 'skipped' => $skipped, 'public_mapped' => $remapPublic];
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -13,6 +13,7 @@ use App\Models\Package;
 use App\Traits\ModelAction;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -400,6 +401,8 @@ class PackageController extends Controller
             if (Package::where('title', $plan['title'])->exists()) {
                 continue;
             }
+            // Explicitly set slug so Package model's request-dependent hook isn't needed
+            $plan['slug'] = Str::slug($plan['title']);
             Package::create($plan);
             $created++;
         }
