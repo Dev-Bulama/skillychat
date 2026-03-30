@@ -512,4 +512,32 @@ class LiveAgentController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get active conversations list for real-time sidebar refresh (AJAX)
+     */
+    public function getConversationsList(): JsonResponse
+    {
+        try {
+            $chatbots = Chatbot::where('user_id', $this->user->id)->pluck('id')->toArray();
+
+            $conversations = ChatbotConversation::whereIn('chatbot_id', $chatbots)
+                ->whereIn('status', ['human_requested', 'human_active'])
+                ->with('chatbot')
+                ->withCount('messages')
+                ->latest('last_message_at')
+                ->get()
+                ->map(fn($c) => [
+                    'uid'          => $c->uid,
+                    'visitor_name' => $c->visitor_name ?? 'Anonymous',
+                    'chatbot_name' => $c->chatbot->name ?? '—',
+                    'status'       => $c->status,
+                    'last_message' => $c->last_message_at?->diffForHumans() ?? '',
+                ]);
+
+            return response()->json(['success' => true, 'conversations' => $conversations]);
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed.'], 500);
+        }
+    }
 }
