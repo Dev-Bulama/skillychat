@@ -7,8 +7,12 @@ use App\Enums\StatusEnum;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
+use App\Models\Chatbot;
+use App\Models\ChatbotConversation;
+use App\Models\ChatbotMessage;
 use App\Models\Core\File;
 use App\Models\CreditLog;
+use App\Models\FeatureFlag;
 use App\Models\MediaPlatform;
 use App\Models\Notification;
 use App\Models\SocialAccount;
@@ -56,9 +60,12 @@ class HomeController extends Controller
     public function home(Request $request): View
     {
 
+        $socialMediaEnabled = FeatureFlag::enabled('social_media');
+
         return view('user.home',[
-            'meta_data' => $this->metaData(["title" => trans('default.user_dashboard')]),
-            'data'      => $this->dashboardCounter()
+            'meta_data'          => $this->metaData(["title" => trans('default.user_dashboard')]),
+            'data'               => $this->dashboardCounter($socialMediaEnabled),
+            'socialMediaEnabled' => $socialMediaEnabled,
         ]);
     }
 
@@ -67,7 +74,31 @@ class HomeController extends Controller
      * counter dashboard data
      */
 
-     public function dashboardCounter() :array{
+     public function dashboardCounter(bool $socialMediaEnabled = true) :array{
+
+        // Always compute chatbot analytics
+        $chatbotIds = Chatbot::where('user_id', $this->user->id)->pluck('id');
+
+        $data['chatbot_report'] = [
+            'total_chatbots'       => $chatbotIds->count(),
+            'total_conversations'  => ChatbotConversation::whereIn('chatbot_id', $chatbotIds)->count(),
+            'conversations_month'  => ChatbotConversation::whereIn('chatbot_id', $chatbotIds)
+                                        ->whereMonth('created_at', now()->month)
+                                        ->whereYear('created_at', now()->year)
+                                        ->count(),
+            'total_messages'       => ChatbotMessage::whereHas('conversation', fn($q) => $q->whereIn('chatbot_id', $chatbotIds))->count(),
+            'messages_month'       => ChatbotMessage::whereHas('conversation', fn($q) => $q->whereIn('chatbot_id', $chatbotIds))
+                                        ->whereMonth('created_at', now()->month)
+                                        ->whereYear('created_at', now()->year)
+                                        ->count(),
+            'human_requests'       => ChatbotConversation::whereIn('chatbot_id', $chatbotIds)
+                                        ->where('status', 'human_requested')
+                                        ->count(),
+            'unique_visitors'      => ChatbotConversation::whereIn('chatbot_id', $chatbotIds)
+                                        ->whereNotNull('visitor_email')
+                                        ->distinct('visitor_email')
+                                        ->count('visitor_email'),
+        ];
 
         $data['account_report']            = [
 

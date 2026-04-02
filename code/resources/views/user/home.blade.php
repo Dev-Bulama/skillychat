@@ -25,6 +25,7 @@
             'total_patforms'   => count($accessPlatforms)])->mapWithKeys(fn($value,$key) :array =>  [k2t($key) => $value])->toArray();
         if( $remainingToken == App\Enums\PlanDuration::value('UNLIMITED')) unset($subscriptionDetails['remaining_word']);
         if( $remainingPost == App\Enums\PlanDuration::value('UNLIMITED')) unset($subscriptionDetails['remaining_profile']);
+        $socialMediaEnabled = $socialMediaEnabled ?? \App\Models\FeatureFlag::enabled('social_media');
 @endphp
 
 
@@ -37,6 +38,8 @@
 <div class="row g-4 mb-4">
     <div class="col">
         <div class="row g-4">
+
+            @if($socialMediaEnabled)
             <div class="col-xl-6">
                 <div class="i-card h-550">
                     <h4 class="card--title mb-4">
@@ -121,7 +124,140 @@
 
                 </div>
             </div>
+            @else
+            {{-- Chatbot Analytics (shown when social media is disabled) --}}
+            <div class="col-12">
+                <div class="i-card">
+                    <h4 class="card--title mb-4">
+                        <i class="bi bi-robot me-2"></i>{{translate('Chatbot Analytics')}}
+                    </h4>
+                    <div class="row g-3">
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+                            <div class="i-card border overview-card p-0">
+                                <div class="p-3">
+                                    <div class="icon graident-icon mb-3">
+                                        <i class="bi bi-robot fs-30"></i>
+                                    </div>
+                                    <div class="content">
+                                        <p class="card--title-sm mb-1">{{translate('Total Chatbots')}}</p>
+                                        <h6>{{Arr::get($data['chatbot_report'],'total_chatbots',0)}}</h6>
+                                    </div>
+                                </div>
+                                <div class="footer border-top d-flex justify-content-between">
+                                    <a class="text--success" href="{{route('user.chatbot.list')}}">{{translate('View All')}}</a>
+                                    <p class="mb-0 fs-14">{{translate('All time')}}</p>
+                                </div>
+                            </div>
+                        </div>
 
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+                            <div class="i-card border overview-card p-0">
+                                <div class="p-3">
+                                    <div class="icon graident-icon mb-3">
+                                        <i class="bi bi-chat-dots fs-30"></i>
+                                    </div>
+                                    <div class="content">
+                                        <p class="card--title-sm mb-1">{{translate('Total Conversations')}}</p>
+                                        <h6>{{Arr::get($data['chatbot_report'],'total_conversations',0)}}</h6>
+                                    </div>
+                                </div>
+                                <div class="footer border-top d-flex justify-content-between">
+                                    <p class="mb-0 fs-14">{{translate('All time')}}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+                            <div class="i-card border overview-card p-0">
+                                <div class="p-3">
+                                    <div class="icon graident-icon mb-3">
+                                        <i class="bi bi-chat-text fs-30"></i>
+                                    </div>
+                                    <div class="content">
+                                        <p class="card--title-sm mb-1">{{translate('Conversations This Month')}}</p>
+                                        <h6>{{Arr::get($data['chatbot_report'],'conversations_month',0)}}</h6>
+                                    </div>
+                                </div>
+                                <div class="footer border-top d-flex justify-content-between">
+                                    <p class="mb-0 fs-14">{{translate('This month')}}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+                            <div class="i-card border overview-card p-0">
+                                <div class="p-3">
+                                    <div class="icon graident-icon mb-3">
+                                        <i class="bi bi-envelope-paper fs-30"></i>
+                                    </div>
+                                    <div class="content">
+                                        <p class="card--title-sm mb-1">{{translate('Messages This Month')}}</p>
+                                        <h6>{{Arr::get($data['chatbot_report'],'messages_month',0)}}</h6>
+                                    </div>
+                                </div>
+                                <div class="footer border-top d-flex justify-content-between">
+                                    <p class="mb-0 fs-14">{{translate('This month')}}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+                            <div class="i-card border overview-card p-0">
+                                <div class="p-3">
+                                    <div class="icon graident-icon mb-3">
+                                        <i class="bi bi-people fs-30"></i>
+                                    </div>
+                                    <div class="content">
+                                        <p class="card--title-sm mb-1">{{translate('Unique Visitors')}}</p>
+                                        <h6>{{Arr::get($data['chatbot_report'],'unique_visitors',0)}}</h6>
+                                    </div>
+                                </div>
+                                <div class="footer border-top d-flex justify-content-between">
+                                    <p class="mb-0 fs-14">{{translate('All time')}}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+                            <div class="i-card border overview-card p-0">
+                                <div class="p-3">
+                                    <div class="icon graident-icon mb-3">
+                                        <i class="bi bi-headset fs-30"></i>
+                                    </div>
+                                    <div class="content">
+                                        <p class="card--title-sm mb-1">{{translate('Human Takeover Requests')}}</p>
+                                        <h6>{{Arr::get($data['chatbot_report'],'human_requests',0)}}</h6>
+                                    </div>
+                                </div>
+                                <div class="footer border-top d-flex justify-content-between">
+                                    <a class="text--success" href="{{route('user.live-agent.dashboard')}}">{{translate('View')}}</a>
+                                    <p class="mb-0 fs-14">{{translate('Pending')}}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-sm-6">
+                            <div class="i-card border overview-card p-0">
+                                <div class="p-3">
+                                    <div class="icon graident-icon mb-3">
+                                        <i class="bi bi-chat-square-text fs-30"></i>
+                                    </div>
+                                    <div class="content">
+                                        <p class="card--title-sm mb-1">{{translate('Total Messages')}}</p>
+                                        <h6>{{Arr::get($data['chatbot_report'],'total_messages',0)}}</h6>
+                                    </div>
+                                </div>
+                                <div class="footer border-top d-flex justify-content-between">
+                                    <p class="mb-0 fs-14">{{translate('All time')}}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            @if($socialMediaEnabled)
             <div class="col-12">
                 <div class="i-card h-100">
                     <div class="row align-items-center g-2 mb-4">
@@ -303,6 +439,7 @@
                     </div>
                 </div>
             </div>
+            @endif
 
             <div class="col-12">
                 <div class="i-card-md card-height-100">

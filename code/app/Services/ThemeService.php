@@ -28,11 +28,6 @@ class ThemeService
         try {
             $theme = Theme::findOrFail($themeId);
 
-            // Only check for physical files on user-installed (non-system) themes
-            if (!$theme->is_system && !$theme->directoryExists()) {
-                return ['success' => false, 'message' => translate('Theme files not found')];
-            }
-
             DB::beginTransaction();
             $theme->activate();
             Cache::forget('active_theme');
