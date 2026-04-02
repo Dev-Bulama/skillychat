@@ -250,7 +250,7 @@
                                         <span><i class="bi bi-headset"></i></span>
                                         <p>
                                             {{ translate('Live Agent') }}
-                                            @php $pendingCount = \App\Models\ChatbotConversation::whereIn('chatbot_id', \App\Models\Chatbot::where('user_id', auth_user()->id)->pluck('id'))->where('status','human_requested')->count(); @endphp
+                                            @php $pendingCount = auth_user('web') ? \App\Models\ChatbotConversation::whereIn('chatbot_id', \App\Models\Chatbot::where('user_id', auth_user('web')->id)->pluck('id'))->where('status','human_requested')->count() : 0; @endphp
                                             @if($pendingCount > 0)
                                                 <span class="badge bg-danger ms-1" style="font-size:.65rem;">{{ $pendingCount }}</span>
                                             @endif
