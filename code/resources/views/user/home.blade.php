@@ -144,7 +144,7 @@
                                     </div>
                                 </div>
                                 <div class="footer border-top d-flex justify-content-between">
-                                    <a class="text--success" href="{{route('user.chatbot.list')}}">{{translate('View All')}}</a>
+                                    <a class="text--success" href="{{route('user.chatbot.index')}}">{{translate('View All')}}</a>
                                     <p class="mb-0 fs-14">{{translate('All time')}}</p>
                                 </div>
                             </div>
