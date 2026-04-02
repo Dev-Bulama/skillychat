@@ -27,7 +27,7 @@
         color: #333;
     }
     .quill-editor-wrap .ql-editor {
-        min-height: inherit;
+        min-height: 200px;
     }
     .quill-editor-wrap .ql-editor p { margin: 0 0 10px; }
     .quill-editor-wrap .ql-editor code {
@@ -46,7 +46,7 @@
 @endpush
 
 @push('script-include')
-<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.umd.min.js" nonce="{{csp_nonce()}}"></script>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js" nonce="{{csp_nonce()}}"></script>
 @endpush
 
 @push('script-push')
@@ -62,7 +62,7 @@
             wrap.className = 'quill-editor-wrap';
 
             var editorDiv = document.createElement('div');
-            editorDiv.style.height = (height || 300) + 'px';
+            editorDiv.style.minHeight = (height || 300) + 'px';
             wrap.appendChild(editorDiv);
 
             textarea.parentNode.insertBefore(wrap, textarea);
