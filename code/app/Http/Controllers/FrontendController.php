@@ -25,10 +25,20 @@ class FrontendController extends Controller
      *
      * @return View
      */
-    public function home($slug = null): View
+    public function home($slug = null)
     {
+        $mode = site_settings('frontend_mode') ?? 'default';
 
+        if ($mode === 'disabled') {
+            return redirect()->route('user.login');
+        }
 
+        if ($mode === 'custom') {
+            $html = site_settings('custom_frontend_html') ?? '<h1>Welcome</h1>';
+            return response($html, 200, ['Content-Type' => 'text/html; charset=utf-8']);
+        }
+
+        // Default CMS frontend
         $menu = Menu::default()->first();
 
 

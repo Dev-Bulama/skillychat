@@ -33,26 +33,33 @@ class SMMBoostController extends Controller
      */
     public function index(Request $request): View
     {
-        $platforms    = SMMPlatform::toArray();
-        $serviceTypes = SMMServiceType::toArray();
+        $allPlatforms    = SMMPlatform::toArray();
+        $allServiceTypes = SMMServiceType::toArray();
 
         $selectedPlatform = $request->platform;
         $selectedType     = $request->service_type;
 
+        // Only expose platforms/types that actually have active services
+        $activePlatforms = SMMService::active()->distinct()->pluck('platform')->toArray();
+        $activeTypes     = SMMService::active()->distinct()->pluck('service_type')->toArray();
+
+        $platforms    = array_filter($allPlatforms,    fn($k) => in_array($k, $activePlatforms),    ARRAY_FILTER_USE_KEY);
+        $serviceTypes = array_filter($allServiceTypes, fn($k) => in_array($k, $activeTypes), ARRAY_FILTER_USE_KEY);
+
         $services = SMMService::with('provider')
             ->active()
             ->when($selectedPlatform, fn($q) => $q->where('platform', $selectedPlatform))
-            ->when($selectedType, fn($q) => $q->where('service_type', $selectedType))
+            ->when($selectedType,     fn($q) => $q->where('service_type', $selectedType))
             ->latest()
             ->paginate(paginateNumber());
 
         return view('user.smm_boost.index', [
-            'meta_data'       => $this->metaData(['title' => translate('Social Media Boost')]),
-            'services'        => $services,
-            'platforms'       => $platforms,
-            'service_types'   => $serviceTypes,
+            'meta_data'         => $this->metaData(['title' => translate('Social Media Boost')]),
+            'services'          => $services,
+            'platforms'         => $platforms,
+            'service_types'     => $serviceTypes,
             'selected_platform' => $selectedPlatform,
-            'selected_type'   => $selectedType,
+            'selected_type'     => $selectedType,
         ]);
     }
 

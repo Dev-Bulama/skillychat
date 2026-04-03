@@ -610,12 +610,18 @@
                     <p>{{ translate('Appearance') }}</p>
                     <small><i class="las la-angle-down"></i></small>
                 </a>
-                <div class="side-menu-dropdown collapse {{ sidebar_awake(['admin.theme.*'], 'drop_down') }}" id="appearanceTheme">
+                <div class="side-menu-dropdown collapse {{ sidebar_awake(['admin.theme.*', 'admin.setting.frontend.mode'], 'drop_down') }}" id="appearanceTheme">
                     <ul class="sub-menu">
                         <li class="sub-menu-item">
                             <a class='sidebar-menu-link {{ sidebar_awake('admin.theme.index') }}' href='{{ route('admin.theme.index') }}'>
-                                <span></span>
+                                <span><i class="bi bi-palette"></i></span>
                                 <p>{{ translate('Themes') }}</p>
+                            </a>
+                        </li>
+                        <li class="sub-menu-item">
+                            <a class='sidebar-menu-link {{ sidebar_awake('admin.setting.frontend.mode') }}' href='{{ route('admin.setting.frontend.mode') }}'>
+                                <span><i class="bi bi-layout-text-window"></i></span>
+                                <p>{{ translate('Frontend Mode') }}</p>
                             </a>
                         </li>
                     </ul>

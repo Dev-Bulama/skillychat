@@ -364,6 +364,10 @@ Route::middleware([
             Route::get('/user-documentation', 'userDocumentation')->name('user.documentation');
             Route::post('/user-documentation/save', 'saveUserDocumentation')->name('user.documentation.save');
 
+            # Frontend mode editor
+            Route::get('/frontend-mode',  'frontendMode')->name('setting.frontend.mode');
+            Route::post('/frontend-mode', 'saveFrontendMode')->name('setting.frontend.mode.save');
+
         });
 
         #Category section refactored

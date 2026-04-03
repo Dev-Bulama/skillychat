@@ -290,6 +290,60 @@ class SettingController extends Controller
     }
 
     /**
+     * Frontend mode editor
+     */
+    public function frontendMode(): View
+    {
+        return view('admin.setting.frontend_mode', [
+            'title'        => 'Frontend Mode',
+            'current_mode' => site_settings('frontend_mode') ?? 'default',
+            'custom_html'  => site_settings('custom_frontend_html') ?? $this->defaultCustomHtml(),
+        ]);
+    }
+
+    public function saveFrontendMode(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'frontend_mode'       => ['required', 'in:default,custom,disabled'],
+            'custom_frontend_html'=> ['nullable', 'string'],
+        ]);
+
+        $this->settingService->updateSettings([
+            'frontend_mode'        => $request->input('frontend_mode'),
+            'custom_frontend_html' => $request->input('custom_frontend_html', ''),
+        ]);
+
+        Cache::forget('site_settings');
+
+        return back()->with(response_status('Frontend mode updated.'));
+    }
+
+    private function defaultCustomHtml(): string
+    {
+        return <<<'HTML'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center">
+    <div class="text-center px-6">
+        <h1 class="text-5xl font-bold text-indigo-700 mb-4">Welcome</h1>
+        <p class="text-xl text-gray-500 mb-8">Your platform is live and ready.</p>
+        <a href="/user/login"
+            class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8 py-3 rounded-full transition">
+            Get Started
+        </a>
+    </div>
+</body>
+</html>
+HTML;
+    }
+
+    /**
      * Save user documentation content
      */
     public function saveUserDocumentation(\Illuminate\Http\Request $request): \Illuminate\Http\RedirectResponse
