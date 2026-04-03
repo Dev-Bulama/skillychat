@@ -39,36 +39,49 @@
         </div>
     </div>
 
-    {{-- Platform Filter --}}
+    {{-- Platform Tabs --}}
+    @if(count($platforms))
     <div class="col-12">
-        <div class="i-card">
-            <form method="get" class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="fs-13 mb-1">{{ translate('Platform') }}</label>
-                    <select name="platform" class="form-select form-select-sm">
-                        <option value="">{{ translate('All Platforms') }}</option>
-                        @foreach($platforms as $val => $label)
-                        <option value="{{ $val }}" {{ $selected_platform == $val ? 'selected' : '' }}>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="fs-13 mb-1">{{ translate('Service Type') }}</label>
-                    <select name="service_type" class="form-select form-select-sm">
-                        <option value="">{{ translate('All Types') }}</option>
-                        @foreach($service_types as $val => $label)
-                        <option value="{{ $val }}" {{ $selected_type == $val ? 'selected' : '' }}>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <button type="submit" class="i-btn btn--sm btn--primary w-100">
-                        <i class="bi bi-funnel me-1"></i>{{ translate('Filter') }}
-                    </button>
-                </div>
-            </form>
+        <div class="i-card py-2 px-3">
+            @php
+                $iconMap = ['instagram'=>'bi-instagram','tiktok'=>'bi-tiktok','youtube'=>'bi-youtube','facebook'=>'bi-facebook','twitter'=>'bi-twitter-x','telegram'=>'bi-telegram','spotify'=>'bi-spotify','linkedin'=>'bi-linkedin','threads'=>'bi-threads','other'=>'bi-globe'];
+            @endphp
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <a href="{{ route('user.smm.index') }}"
+                    class="i-btn btn--sm {{ !$selected_platform ? 'btn--primary' : 'btn--outline' }} capsuled">
+                    {{ translate('All') }}
+                </a>
+                @foreach($platforms as $val => $label)
+                <a href="{{ route('user.smm.index', array_filter(['platform' => $val, 'service_type' => $selected_type])) }}"
+                    class="i-btn btn--sm {{ $selected_platform == $val ? 'btn--primary' : 'btn--outline' }} capsuled">
+                    <i class="bi {{ $iconMap[$val] ?? 'bi-globe' }} me-1"></i>{{ $label }}
+                </a>
+                @endforeach
+            </div>
         </div>
     </div>
+    @endif
+
+    {{-- Service Type Filter --}}
+    @if(count($service_types))
+    <div class="col-12">
+        <div class="i-card py-2 px-3">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="fs-13 text-muted me-1">{{ translate('Type:') }}</span>
+                <a href="{{ route('user.smm.index', array_filter(['platform' => $selected_platform, 'service_type' => ''])) }}"
+                    class="badge {{ !$selected_type ? 'bg-primary' : 'bg-light text-dark border' }} fs-12 text-decoration-none px-3 py-2">
+                    {{ translate('All') }}
+                </a>
+                @foreach($service_types as $val => $label)
+                <a href="{{ route('user.smm.index', array_filter(['platform' => $selected_platform, 'service_type' => $val])) }}"
+                    class="badge {{ $selected_type == $val ? 'bg-primary' : 'bg-light text-dark border' }} fs-12 text-decoration-none px-3 py-2">
+                    {{ $label }}
+                </a>
+                @endforeach
+            </div>
+        </div>
+    </div>
+    @endif
 
     {{-- Services Grid --}}
     @forelse($services as $service)
