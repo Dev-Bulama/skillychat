@@ -261,6 +261,33 @@
                         </div>
                     </li>
 
+                    {{-- Social Media Boost --}}
+                    <li class="sidemenu-item">
+                        <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse @if(request()->routeIs('user.smm.*')) active @endif">
+                            <div class="sidemenu-icon"><i class="bi bi-rocket-takeoff"></i></div>
+                            <span>{{translate("Social Media Boost")}} <small><i class="bi bi-chevron-down"></i></small></span>
+                        </a>
+                        <div class="side-menu-dropdown @if(request()->routeIs('user.smm.*')) show-sideMenu @endif">
+                            <ul class="sub-menu">
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{request()->routeIs('user.smm.index') ? 'active' :''}}" href="{{route('user.smm.index')}}">
+                                        <span><i class="bi bi-grid"></i></span><p>{{translate('Browse Services')}}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{request()->routeIs('user.smm.orders') ? 'active' :''}}" href="{{route('user.smm.orders')}}">
+                                        <span><i class="bi bi-list-check"></i></span><p>{{translate('My Orders')}}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{request()->routeIs('user.smm.how-it-works') ? 'active' :''}}" href="{{route('user.smm.how-it-works')}}">
+                                        <span><i class="bi bi-question-circle"></i></span><p>{{translate('How It Works')}}</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+
                     @if($bulkSmsEnabled)
                     <li class="sidemenu-item">
                         <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse @if(request()->routeIs('user.bulk-sms.*')) active @endif">

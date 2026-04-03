@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AiTemplateController;
+use App\Http\Controllers\Admin\SMMBoostController;
 use App\Http\Controllers\Admin\Auth\LoginController;
 use App\Http\Controllers\Admin\FeatureFlagController;
 use App\Http\Controllers\Admin\Auth\NewPasswordController;
@@ -669,6 +670,37 @@ Route::middleware([
             Route::post('/delete', 'delete')->name('delete');
             Route::get('/configure/{id}', 'configure')->name('configure');
             Route::post('/configure/{id}', 'updateConfig')->name('update.config');
+        });
+
+        /** SMM Boost */
+        Route::controller(SMMBoostController::class)->name('smm.')->prefix('smm-boost/')->group(function () {
+            Route::get('/setup-guide',                    'setupGuide')->name('setup-guide');
+
+            // Providers
+            Route::get('/providers',                      'providers')->name('providers');
+            Route::get('/providers/create',               'createProvider')->name('providers.create');
+            Route::post('/providers/store',               'storeProvider')->name('providers.store');
+            Route::get('/providers/{id}/edit',            'editProvider')->name('providers.edit');
+            Route::put('/providers/{id}/update',          'updateProvider')->name('providers.update');
+            Route::delete('/providers/{id}/delete',       'destroyProvider')->name('providers.destroy');
+            Route::get('/providers/{id}/test',            'testProvider')->name('providers.test');
+            Route::post('/providers/{id}/import-services','importServices')->name('providers.import');
+
+            // Services
+            Route::get('/services',                       'services')->name('services');
+            Route::get('/services/create',                'createService')->name('services.create');
+            Route::post('/services/store',                'storeService')->name('services.store');
+            Route::get('/services/{id}/edit',             'editService')->name('services.edit');
+            Route::put('/services/{id}/update',           'updateService')->name('services.update');
+            Route::delete('/services/{id}/delete',        'destroyService')->name('services.destroy');
+            Route::get('/services/{id}/toggle',           'toggleService')->name('services.toggle');
+
+            // Orders
+            Route::get('/orders',                         'orders')->name('orders');
+            Route::get('/orders/{id}',                    'orderDetail')->name('orders.detail');
+            Route::post('/orders/{id}/update-status',     'updateOrderStatus')->name('orders.update-status');
+            Route::post('/orders/{id}/refund',            'refundOrder')->name('orders.refund');
+            Route::post('/orders/{id}/sync',              'syncOrder')->name('orders.sync');
         });
 
         /** Feature Flags */

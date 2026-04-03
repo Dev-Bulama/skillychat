@@ -950,6 +950,43 @@
             @endif
 
 
+            {{-- SMM Boost --}}
+            <li class="sidebar-menu-title">{{ translate('SMM Boost') }}</li>
+            <li class="sidebar-menu-item">
+                <a class="sidebar-menu-link {{ sidebar_awake('admin.smm.*') }}" data-bs-toggle="collapse" href="#smmBoostMenu" role="button">
+                    <span><i class="bi bi-rocket-takeoff"></i></span>
+                    <p>{{ translate('Social Media Boost') }}</p>
+                </a>
+                <div class="side-menu-dropdown collapse {{ sidebar_awake(['admin.smm.*'], 'drop_down') }}" id="smmBoostMenu">
+                    <ul class="sub-menu">
+                        <li class="sub-menu-item">
+                            <a class="sidebar-menu-link {{ sidebar_awake('admin.smm.setup-guide') }}" href="{{ route('admin.smm.setup-guide') }}">
+                                <span><i class="bi bi-book"></i></span>
+                                <p>{{ translate('Setup Guide') }}</p>
+                            </a>
+                        </li>
+                        <li class="sub-menu-item">
+                            <a class="sidebar-menu-link {{ sidebar_awake(['admin.smm.providers','admin.smm.providers.*']) }}" href="{{ route('admin.smm.providers') }}">
+                                <span><i class="bi bi-plug"></i></span>
+                                <p>{{ translate('Providers') }}</p>
+                            </a>
+                        </li>
+                        <li class="sub-menu-item">
+                            <a class="sidebar-menu-link {{ sidebar_awake(['admin.smm.services','admin.smm.services.*']) }}" href="{{ route('admin.smm.services') }}">
+                                <span><i class="bi bi-grid"></i></span>
+                                <p>{{ translate('Services') }}</p>
+                            </a>
+                        </li>
+                        <li class="sub-menu-item">
+                            <a class="sidebar-menu-link {{ sidebar_awake(['admin.smm.orders','admin.smm.orders.*']) }}" href="{{ route('admin.smm.orders') }}">
+                                <span><i class="bi bi-list-check"></i></span>
+                                <p>{{ translate('Orders') }}</p>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
             @if (check_permission('view_settings'))
             <li class="sidebar-menu-item">
                 <a class='sidebar-menu-link {{ sidebar_awake('admin.feature-flags.*') }}' href='{{ route('admin.feature-flags.index') }}'>
