@@ -120,25 +120,37 @@ class SMMBoostController extends Controller
         $driver   = SMMProviderFactory::make($provider);
         $services = $driver->getServices();
 
+        if (empty($services)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No services returned from provider. Check the API URL and key.',
+            ]);
+        }
+
         $imported = 0;
         foreach ($services as $svc) {
+            if (empty($svc['provider_service_id'])) continue;
+
             $exists = SMMService::where('provider_id', $provider->id)
                 ->where('provider_service_id', $svc['provider_service_id'])
                 ->exists();
 
             if (!$exists) {
+                $name     = $svc['name'] ?? '';
+                $category = $svc['category'] ?? '';
+
                 SMMService::create([
-                    'provider_id'          => $provider->id,
-                    'provider_service_id'  => $svc['provider_service_id'],
-                    'name'                 => $svc['name'],
-                    'platform'             => 'other',
-                    'service_type'         => $svc['type'] ?? 'other',
-                    'description'          => $svc['description'] ?? '',
-                    'price_per_1000'       => 1.00, // admin must set proper pricing
-                    'min_quantity'         => max(1, $svc['min'] ?? 100),
-                    'max_quantity'         => min(1000000, $svc['max'] ?? 100000),
-                    'delivery_estimate'    => '1-3 days',
-                    'status'               => StatusEnum::false->status(), // disabled until admin reviews
+                    'provider_id'         => $provider->id,
+                    'provider_service_id' => $svc['provider_service_id'],
+                    'name'                => $name,
+                    'platform'            => $this->detectPlatform($name, $category),
+                    'service_type'        => $this->detectServiceType($name, $category, $svc['type'] ?? ''),
+                    'description'         => $svc['description'] ?? $category,
+                    'price_per_1000'      => 1.00,
+                    'min_quantity'        => max(1, (int) ($svc['min'] ?? 100)),
+                    'max_quantity'        => min(1000000, (int) ($svc['max'] ?? 100000)),
+                    'delivery_estimate'   => '1-3 days',
+                    'status'              => StatusEnum::false->status(),
                 ]);
                 $imported++;
             }
@@ -146,8 +158,103 @@ class SMMBoostController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => "Imported {$imported} new services (disabled by default — please review and set pricing).",
+            'message' => "Imported {$imported} new services out of " . count($services) . " total (disabled by default — set pricing before enabling).",
         ]);
+    }
+
+    /**
+     * Re-detect platform & service_type for all services of a provider
+     * that were imported with 'other' as the platform.
+     */
+    public function redetectServices(int $id): JsonResponse
+    {
+        $provider = SMMProvider::findOrFail($id);
+        $updated  = 0;
+
+        SMMService::where('provider_id', $provider->id)->chunkById(100, function ($services) use (&$updated) {
+            foreach ($services as $svc) {
+                $platform    = $this->detectPlatform($svc->name, $svc->description ?? '');
+                $serviceType = $this->detectServiceType($svc->name, $svc->description ?? '', '');
+
+                if ($platform !== $svc->platform || $serviceType !== $svc->service_type) {
+                    $svc->update([
+                        'platform'     => $platform,
+                        'service_type' => $serviceType,
+                    ]);
+                    $updated++;
+                }
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => "Re-detected platform/type for {$updated} services.",
+        ]);
+    }
+
+    private function detectPlatform(string $name, string $category = ''): string
+    {
+        $text = strtolower($name . ' ' . $category);
+
+        $map = [
+            'instagram' => 'instagram',
+            'tiktok'    => 'tiktok',
+            'tik tok'   => 'tiktok',
+            'youtube'   => 'youtube',
+            'facebook'  => 'facebook',
+            'twitter'   => 'twitter',
+            'telegram'  => 'telegram',
+            'spotify'   => 'spotify',
+            'linkedin'  => 'linkedin',
+            'threads'   => 'threads',
+            'soundcloud'=> 'other',
+            'twitch'    => 'other',
+            'snapchat'  => 'other',
+            'pinterest' => 'other',
+        ];
+
+        foreach ($map as $keyword => $platform) {
+            if (str_contains($text, $keyword)) {
+                return $platform;
+            }
+        }
+
+        return 'other';
+    }
+
+    private function detectServiceType(string $name, string $category = '', string $providerType = ''): string
+    {
+        $text = strtolower($name . ' ' . $category . ' ' . $providerType);
+
+        $map = [
+            'story view'  => 'story_views',
+            'live view'   => 'live_views',
+            'watch time'  => 'watch_time',
+            'watch hour'  => 'watch_time',
+            'subscriber'  => 'subscribers',
+            'follower'    => 'followers',
+            'follow'      => 'followers',
+            'impression'  => 'impressions',
+            'comment'     => 'comments',
+            'share'       => 'shares',
+            'retweet'     => 'shares',
+            'repost'      => 'shares',
+            'save'        => 'saves',
+            'like'        => 'likes',
+            'heart'       => 'likes',
+            'reaction'    => 'likes',
+            'view'        => 'views',
+            'play'        => 'plays',
+            'stream'      => 'plays',
+        ];
+
+        foreach ($map as $keyword => $type) {
+            if (str_contains($text, $keyword)) {
+                return $type;
+            }
+        }
+
+        return 'other';
     }
 
     // ─── Services ───────────────────────────────────────────────────────────────
@@ -164,7 +271,7 @@ class SMMBoostController extends Controller
         return view('admin.smm_boost.services', [
             'title'        => 'SMM Services',
             'services'     => $services,
-            'providers'    => SMMProvider::active()->get(),
+            'providers'    => SMMProvider::latest()->get(), // all providers, not just active
             'platforms'    => SMMPlatform::toArray(),
             'service_types'=> SMMServiceType::toArray(),
         ]);

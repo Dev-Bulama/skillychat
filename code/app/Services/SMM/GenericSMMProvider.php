@@ -38,19 +38,31 @@ class GenericSMMProvider implements SMMProviderInterface
             return [];
         }
 
-        // Normalize response — most providers return a flat array of service objects
-        return array_map(function ($item) {
+        // Some providers wrap the list in a 'data' or 'services' key
+        if (isset($response['data']) && is_array($response['data'])) {
+            $response = $response['data'];
+        } elseif (isset($response['services']) && is_array($response['services'])) {
+            $response = $response['services'];
+        }
+
+        // Filter out non-service entries (e.g. error keys at top level)
+        $services = array_filter($response, fn($item) => is_array($item));
+
+        return array_values(array_map(function ($item) {
+            // Providers use 'service', 'id', or 'service_id' for the service identifier
+            $serviceId = $item['service'] ?? $item['service_id'] ?? $item['id'] ?? '';
+
             return [
-                'provider_service_id' => (string) ($item['service'] ?? $item['id'] ?? ''),
-                'name'                => $item['name'] ?? '',
-                'type'                => strtolower($item['type'] ?? 'other'),
-                'category'            => $item['category'] ?? '',
-                'min'                 => (int) ($item['min'] ?? 1),
-                'max'                 => (int) ($item['max'] ?? 100000),
-                'rate'                => (float) ($item['rate'] ?? 0),  // provider's own price per 1000
-                'description'         => $item['description'] ?? '',
+                'provider_service_id' => (string) $serviceId,
+                'name'                => $item['name'] ?? $item['title'] ?? '',
+                'type'                => $item['type'] ?? $item['service_type'] ?? 'other',
+                'category'            => $item['category'] ?? $item['platform'] ?? '',
+                'min'                 => (int) ($item['min'] ?? $item['min_order'] ?? 1),
+                'max'                 => (int) ($item['max'] ?? $item['max_order'] ?? 100000),
+                'rate'                => (float) ($item['rate'] ?? $item['price'] ?? 0),
+                'description'         => $item['description'] ?? $item['desc'] ?? '',
             ];
-        }, $response);
+        }, $services));
     }
 
     public function placeOrder(string $providerServiceId, string $link, int $quantity): array
