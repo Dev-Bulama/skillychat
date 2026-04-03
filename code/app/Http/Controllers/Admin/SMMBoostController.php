@@ -28,7 +28,7 @@ class SMMBoostController extends Controller
     public function setupGuide(): View
     {
         return view('admin.smm_boost.setup_guide', [
-            'meta_data' => $this->metaData(['title' => 'SMM Boost Setup Guide']),
+            'title' => 'SMM Boost Setup Guide',
         ]);
     }
 
@@ -37,7 +37,7 @@ class SMMBoostController extends Controller
     public function providers(): View
     {
         return view('admin.smm_boost.providers', [
-            'meta_data' => $this->metaData(['title' => 'SMM Providers']),
+            'title'     => 'SMM Providers',
             'providers' => SMMProvider::latest()->paginate(paginateNumber()),
         ]);
     }
@@ -45,8 +45,8 @@ class SMMBoostController extends Controller
     public function createProvider(): View
     {
         return view('admin.smm_boost.provider_form', [
-            'meta_data' => $this->metaData(['title' => 'Add Provider']),
-            'provider'  => null,
+            'title'    => 'Add Provider',
+            'provider' => null,
         ]);
     }
 
@@ -74,8 +74,8 @@ class SMMBoostController extends Controller
     {
         $provider = SMMProvider::findOrFail($id);
         return view('admin.smm_boost.provider_form', [
-            'meta_data' => $this->metaData(['title' => 'Edit Provider']),
-            'provider'  => $provider,
+            'title'    => 'Edit Provider',
+            'provider' => $provider,
         ]);
     }
 
@@ -162,7 +162,7 @@ class SMMBoostController extends Controller
             ->paginate(paginateNumber());
 
         return view('admin.smm_boost.services', [
-            'meta_data'    => $this->metaData(['title' => 'SMM Services']),
+            'title'        => 'SMM Services',
             'services'     => $services,
             'providers'    => SMMProvider::active()->get(),
             'platforms'    => SMMPlatform::toArray(),
@@ -173,7 +173,7 @@ class SMMBoostController extends Controller
     public function createService(): View
     {
         return view('admin.smm_boost.service_form', [
-            'meta_data'    => $this->metaData(['title' => 'Add Service']),
+            'title'        => 'Add Service',
             'service'      => null,
             'providers'    => SMMProvider::active()->get(),
             'platforms'    => SMMPlatform::toArray(),
@@ -206,7 +206,7 @@ class SMMBoostController extends Controller
     public function editService(int $id): View
     {
         return view('admin.smm_boost.service_form', [
-            'meta_data'    => $this->metaData(['title' => 'Edit Service']),
+            'title'        => 'Edit Service',
             'service'      => SMMService::findOrFail($id),
             'providers'    => SMMProvider::active()->get(),
             'platforms'    => SMMPlatform::toArray(),
@@ -265,7 +265,7 @@ class SMMBoostController extends Controller
             ->paginate(paginateNumber());
 
         return view('admin.smm_boost.orders', [
-            'meta_data' => $this->metaData(['title' => 'SMM Orders']),
+            'title'     => 'SMM Orders',
             'orders'    => $orders,
             'statuses'  => SMMOrderStatus::labels(),
             'platforms' => SMMPlatform::toArray(),
@@ -277,9 +277,9 @@ class SMMBoostController extends Controller
         $order = SMMOrder::with(['user', 'service.provider', 'logs'])->findOrFail($id);
 
         return view('admin.smm_boost.order_detail', [
-            'meta_data' => $this->metaData(['title' => 'Order #' . $order->uid]),
-            'order'     => $order,
-            'statuses'  => SMMOrderStatus::labels(),
+            'title'    => 'Order #' . Str::upper(Str::substr($order->uid, 0, 8)),
+            'order'    => $order,
+            'statuses' => SMMOrderStatus::labels(),
         ]);
     }
 
