@@ -30,7 +30,7 @@ class FrontendController extends Controller
         $mode = site_settings('frontend_mode') ?? 'default';
 
         if ($mode === 'disabled') {
-            return redirect()->route('login');
+            return redirect()->route('auth.login');
         }
 
         if ($mode === 'custom') {
