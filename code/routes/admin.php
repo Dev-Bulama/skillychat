@@ -685,6 +685,7 @@ Route::middleware([
             Route::delete('/providers/{id}/delete',       'destroyProvider')->name('providers.destroy');
             Route::get('/providers/{id}/test',            'testProvider')->name('providers.test');
             Route::post('/providers/{id}/import-services','importServices')->name('providers.import');
+            Route::post('/providers/{id}/redetect',       'redetectServices')->name('providers.redetect');
 
             // Services
             Route::get('/services',                       'services')->name('services');

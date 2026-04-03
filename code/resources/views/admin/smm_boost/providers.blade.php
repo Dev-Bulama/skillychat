@@ -57,6 +57,12 @@
                                     data-url="{{ route('admin.smm.providers.import', $provider->id) }}">
                                     <i class="bi bi-download me-1"></i>{{ translate('Import') }}
                                 </button>
+                                <button class="i-btn btn--sm btn--outline redetect-services"
+                                    data-id="{{ $provider->id }}"
+                                    data-url="{{ route('admin.smm.providers.redetect', $provider->id) }}"
+                                    title="{{ translate('Re-detect platform & type from service names') }}">
+                                    <i class="bi bi-arrow-repeat me-1"></i>{{ translate('Re-detect') }}
+                                </button>
                                 <a href="{{ route('admin.smm.providers.edit', $provider->id) }}"
                                     class="i-btn btn--sm btn--primary">
                                     <i class="bi bi-pencil"></i>
@@ -123,6 +129,28 @@
                 }).catch(function (e) {
                     showModal('{{ translate("Error") }}', '<div class="alert alert-danger">' + e.message + '</div>');
                 });
+        });
+    });
+
+    document.querySelectorAll('.redetect-services').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (!confirm('{{ translate("Re-detect platform and service type for all imported services of this provider? This will update services that were tagged as \'other\'.") }}')) return;
+            var url = this.dataset.url;
+            showModal('{{ translate("Re-detecting...") }}', '<div class="text-center py-3"><div class="spinner-border text-primary"></div></div>');
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                }
+            }).then(r => r.json())
+              .then(function (data) {
+                var cls = data.success ? 'success' : 'danger';
+                showModal('{{ translate("Re-detect Result") }}',
+                    '<div class="alert alert-' + cls + '">' + data.message + '</div>');
+              }).catch(function (e) {
+                showModal('{{ translate("Error") }}', '<div class="alert alert-danger">' + e.message + '</div>');
+              });
         });
     });
 
