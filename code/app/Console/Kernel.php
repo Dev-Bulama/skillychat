@@ -12,7 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Sync SMM order statuses every 10 minutes
+        $schedule->job(new \App\Jobs\SyncSMMOrderStatuses())->everyTenMinutes();
     }
 
     /**

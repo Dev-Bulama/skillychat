@@ -3,6 +3,7 @@
 use App\Http\Controllers\User\AiVideoController;
 use App\Http\Controllers\User\BulkEmailController;
 use App\Http\Controllers\User\BulkSmsController;
+use App\Http\Controllers\User\SMMBoostController;
 use App\Http\Controllers\User\SocialPostController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\User\ChatbotController;
@@ -376,6 +377,17 @@ use Illuminate\Support\Facades\Http;
              Route::post('/provider/store',       'storeProvider')->name('provider.store');
              Route::get('/provider/{id}/delete',  'destroyProvider')->name('provider.destroy');
              Route::post('/provider/{id}/test',   'testProvider')->name('provider.test');
+         });
+
+         # ── Social Media Boost ───────────────────────────────────────────────────────
+         Route::controller(SMMBoostController::class)->name('smm.')->prefix('smm/')->group(function () {
+             Route::get('/',                         'index')->name('index');
+             Route::get('/how-it-works',             'howItWorks')->name('how-it-works');
+             Route::get('/service/{uid}/order',      'orderForm')->name('order-form');
+             Route::get('/price',                    'getPrice')->name('get-price');
+             Route::post('/order/place',             'placeOrder')->name('place-order');
+             Route::get('/orders',                   'orders')->name('orders');
+             Route::get('/orders/{uid}',             'orderDetail')->name('order-detail');
          });
 
          # ── Bulk Email ────────────────────────────────────────────────────────────────
