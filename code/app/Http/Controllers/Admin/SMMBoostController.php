@@ -259,21 +259,55 @@ class SMMBoostController extends Controller
 
     // ─── Services ───────────────────────────────────────────────────────────────
 
-    public function services(Request $request): View
+    public function services(Request $request): View|JsonResponse
     {
-        $services = SMMService::with('provider')
-            ->when($request->platform, fn($q) => $q->where('platform', $request->platform))
+        $query = SMMService::with('provider')
+            ->when($request->platform,     fn($q) => $q->where('platform', $request->platform))
             ->when($request->service_type, fn($q) => $q->where('service_type', $request->service_type))
-            ->when($request->provider_id, fn($q) => $q->where('provider_id', $request->provider_id))
-            ->latest()
-            ->paginate(paginateNumber());
+            ->when($request->provider_id,  fn($q) => $q->where('provider_id', $request->provider_id))
+            ->when($request->search,       fn($q) => $q->where('name', 'like', '%' . $request->search . '%'))
+            ->latest();
+
+        if ($request->ajax()) {
+            $services = $query->paginate(paginateNumber());
+            return response()->json([
+                'html'       => view('admin.smm_boost.partials.services_rows', compact('services'))->render(),
+                'pagination' => (string) $services->withQueryString()->links(),
+                'total'      => $services->total(),
+            ]);
+        }
+
+        $services = $query->paginate(paginateNumber());
 
         return view('admin.smm_boost.services', [
             'title'        => 'SMM Services',
             'services'     => $services,
-            'providers'    => SMMProvider::latest()->get(), // all providers, not just active
+            'providers'    => SMMProvider::latest()->get(),
             'platforms'    => SMMPlatform::toArray(),
             'service_types'=> SMMServiceType::toArray(),
+        ]);
+    }
+
+    /**
+     * Bulk toggle (activate/deactivate) services.
+     */
+    public function bulkToggleServices(Request $request): JsonResponse
+    {
+        $request->validate([
+            'ids'    => ['required', 'array'],
+            'ids.*'  => ['required', 'exists:smm_services,id'],
+            'action' => ['required', 'in:activate,deactivate'],
+        ]);
+
+        $status = $request->action === 'activate'
+            ? StatusEnum::true->status()
+            : StatusEnum::false->status();
+
+        SMMService::whereIn('id', $request->ids)->update(['status' => $status]);
+
+        return response()->json([
+            'success' => true,
+            'message' => count($request->ids) . ' service(s) ' . ($request->action === 'activate' ? 'activated' : 'deactivated') . '.',
         ]);
     }
 

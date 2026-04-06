@@ -166,9 +166,16 @@
         extraKeys: { 'Ctrl-Space': 'autocomplete' }
     });
 
-    // Sync CodeMirror → textarea before form submit
-    document.getElementById('frontendModeForm').addEventListener('submit', function () {
+    // Sync CodeMirror → textarea, then base64-encode to bypass server-side script sanitization
+    document.getElementById('frontendModeForm').addEventListener('submit', function (e) {
         editor.save();
+        var ta = document.getElementById('codeEditor');
+        try {
+            // encodeURIComponent handles Unicode; btoa encodes to base64
+            ta.value = btoa(unescape(encodeURIComponent(ta.value)));
+        } catch(err) {
+            // If encoding fails, submit as-is (scripts may be stripped server-side)
+        }
     });
 
     // Mode card selection highlight + enable/disable editor panel

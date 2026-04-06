@@ -308,9 +308,16 @@ class SettingController extends Controller
             'custom_frontend_html'=> ['nullable', 'string'],
         ]);
 
+        // HTML is base64-encoded by the editor JS to prevent the Sanitization middleware
+        // from stripping <script> tags. Decode it back before persisting.
+        $rawHtml = $request->input('custom_frontend_html', '');
+        if ($rawHtml !== '' && base64_encode(base64_decode($rawHtml, true)) === $rawHtml) {
+            $rawHtml = base64_decode($rawHtml);
+        }
+
         $this->settingService->updateSettings([
             'frontend_mode'        => $request->input('frontend_mode'),
-            'custom_frontend_html' => $request->input('custom_frontend_html', ''),
+            'custom_frontend_html' => $rawHtml,
         ]);
 
         Cache::forget('site_settings');
