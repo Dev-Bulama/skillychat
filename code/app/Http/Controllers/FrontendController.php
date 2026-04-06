@@ -35,7 +35,10 @@ class FrontendController extends Controller
 
         if ($mode === 'custom') {
             $html = site_settings('custom_frontend_html') ?? '<h1>Welcome</h1>';
-            return response($html, 200, ['Content-Type' => 'text/html; charset=utf-8']);
+            return response($html, 200, [
+                'Content-Type'    => 'text/html; charset=utf-8',
+                'X-XSS-Protection'=> '0', // disable browser XSS filter so inline scripts are allowed
+            ]);
         }
 
         // Default CMS frontend

@@ -699,6 +699,7 @@ Route::middleware([
             Route::put('/services/{id}/update',           'updateService')->name('services.update');
             Route::delete('/services/{id}/delete',        'destroyService')->name('services.destroy');
             Route::get('/services/{id}/toggle',           'toggleService')->name('services.toggle');
+            Route::post('/services/bulk-toggle',          'bulkToggleServices')->name('services.bulk-toggle');
 
             // Orders
             Route::get('/orders',                         'orders')->name('orders');

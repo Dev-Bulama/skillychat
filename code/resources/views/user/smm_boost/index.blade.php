@@ -83,69 +83,80 @@
     </div>
     @endif
 
-    {{-- Services Grid --}}
-    @forelse($services as $service)
-    <div class="col-xl-4 col-md-6">
-        <div class="i-card h-100 border position-relative d-flex flex-column">
-            <div class="d-flex align-items-center gap-2 mb-3">
-                @php
-                    $iconMap = ['instagram'=>'bi-instagram','tiktok'=>'bi-tiktok','youtube'=>'bi-youtube','facebook'=>'bi-facebook','twitter'=>'bi-twitter-x','telegram'=>'bi-telegram','spotify'=>'bi-spotify','linkedin'=>'bi-linkedin','threads'=>'bi-threads'];
-                    $icon = $iconMap[$service->platform] ?? 'bi-globe';
-                @endphp
-                <span class="icon-btn icon-btn-sm primary circle">
-                    <i class="bi {{ $icon }}"></i>
+    {{-- Search Bar --}}
+    <div class="col-12">
+        <div class="i-card py-2 px-3">
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-end-0">
+                    <i class="bi bi-search text-muted"></i>
                 </span>
-                <div>
-                    <span class="badge bg-primary fs-11">{{ ucfirst($service->platform) }}</span>
-                    <span class="badge bg-secondary fs-11 ms-1">{{ ucfirst(str_replace('_',' ',$service->service_type)) }}</span>
-                </div>
-            </div>
-            <h6 class="fw-semibold mb-2">{{ $service->name }}</h6>
-            @if($service->description)
-            <p class="text-muted fs-13 mb-3">{{ Str::limit($service->description, 80) }}</p>
-            @endif
-            <div class="mt-auto">
-                <div class="row g-2 mb-3">
-                    <div class="col-6">
-                        <div class="p-2 border rounded text-center">
-                            <div class="fw-semibold text--primary">${{ number_format($service->price_per_1000, 2) }}</div>
-                            <div class="fs-12 text-muted">{{ translate('per 1,000') }}</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="p-2 border rounded text-center">
-                            <div class="fw-semibold">{{ number_format($service->min_quantity) }}–{{ number_format($service->max_quantity) }}</div>
-                            <div class="fs-12 text-muted">{{ translate('qty range') }}</div>
-                        </div>
-                    </div>
-                </div>
-                @if($service->delivery_estimate)
-                <p class="fs-12 text-muted mb-3">
-                    <i class="bi bi-clock me-1"></i>{{ translate('Delivery:') }} {{ $service->delivery_estimate }}
-                </p>
-                @endif
-                <a href="{{ route('user.smm.order-form', $service->uid) }}"
-                    class="i-btn btn--sm btn--primary capsuled w-100">
-                    <i class="bi bi-cart-plus me-1"></i>{{ translate('Order Now') }}
-                </a>
+                <input type="text" id="smm-search" class="form-control border-start-0 ps-0"
+                    placeholder="{{ translate('Search for services (e.g. Instagram followers, TikTok views…)') }}"
+                    value="{{ $search ?? '' }}" autocomplete="off">
+                <button class="btn btn-outline-secondary" id="smm-search-clear" type="button">
+                    <i class="bi bi-x"></i>
+                </button>
             </div>
         </div>
     </div>
-    @empty
-    <div class="col-12">
-        <div class="i-card text-center py-5">
-            <i class="bi bi-rocket-takeoff fs-50 text-muted mb-3 d-block"></i>
-            <h5>{{ translate('No services available yet') }}</h5>
-            <p class="text-muted">{{ translate('Check back soon — services will appear here once configured.') }}</p>
-        </div>
-    </div>
-    @endforelse
 
-    @if($services->hasPages())
+    {{-- Services Grid --}}
     <div class="col-12">
-        {{ $services->withQueryString()->links() }}
+        <div class="row g-4" id="services-grid">
+            @include('user.smm_boost.partials.service_cards', ['services' => $services])
+        </div>
     </div>
-    @endif
+
+    <div class="col-12" id="smm-pagination">
+        @if($services->hasPages())
+        {{ $services->withQueryString()->links() }}
+        @endif
+    </div>
+
+@push('script-push')
+<script nonce="{{ csp_nonce() }}">
+(function () {
+    var baseUrl      = '{{ route('user.smm.index') }}';
+    var debounceTimer;
+
+    function getParams() {
+        return {
+            platform:     '{{ $selected_platform ?? '' }}',
+            service_type: '{{ $selected_type ?? '' }}',
+            search:       document.getElementById('smm-search').value.trim(),
+        };
+    }
+
+    function fetchServices() {
+        var params  = getParams();
+        var url     = new URL(baseUrl);
+        Object.entries(params).forEach(([k, v]) => { if (v) url.searchParams.set(k, v); });
+
+        var grid = document.getElementById('services-grid');
+        grid.style.opacity = '0.4';
+
+        fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(data => {
+                grid.innerHTML = data.html;
+                grid.style.opacity = '1';
+                document.getElementById('smm-pagination').innerHTML = data.pagination;
+            })
+            .catch(() => { grid.style.opacity = '1'; });
+    }
+
+    document.getElementById('smm-search').addEventListener('input', function () {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(fetchServices, 300);
+    });
+
+    document.getElementById('smm-search-clear').addEventListener('click', function () {
+        document.getElementById('smm-search').value = '';
+        fetchServices();
+    });
+})();
+</script>
+@endpush
 
 </div>
 @endsection

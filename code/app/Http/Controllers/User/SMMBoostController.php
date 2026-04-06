@@ -31,13 +31,14 @@ class SMMBoostController extends Controller
     /**
      * Service listing page.
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|JsonResponse
     {
         $allPlatforms    = SMMPlatform::toArray();
         $allServiceTypes = SMMServiceType::toArray();
 
         $selectedPlatform = $request->platform;
         $selectedType     = $request->service_type;
+        $search           = $request->search;
 
         // Only expose platforms/types that actually have active services
         $activePlatforms = SMMService::active()->distinct()->pluck('platform')->toArray();
@@ -50,8 +51,17 @@ class SMMBoostController extends Controller
             ->active()
             ->when($selectedPlatform, fn($q) => $q->where('platform', $selectedPlatform))
             ->when($selectedType,     fn($q) => $q->where('service_type', $selectedType))
+            ->when($search,           fn($q) => $q->where('name', 'like', '%' . $search . '%'))
             ->latest()
             ->paginate(paginateNumber());
+
+        if ($request->ajax()) {
+            return response()->json([
+                'html'       => view('user.smm_boost.partials.service_cards', compact('services'))->render(),
+                'pagination' => (string) $services->withQueryString()->links(),
+                'total'      => $services->total(),
+            ]);
+        }
 
         return view('user.smm_boost.index', [
             'meta_data'         => $this->metaData(['title' => translate('Social Media Boost')]),
@@ -60,6 +70,7 @@ class SMMBoostController extends Controller
             'service_types'     => $serviceTypes,
             'selected_platform' => $selectedPlatform,
             'selected_type'     => $selectedType,
+            'search'            => $search,
         ]);
     }
 
