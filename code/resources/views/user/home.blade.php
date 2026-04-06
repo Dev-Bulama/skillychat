@@ -28,12 +28,217 @@
         $socialMediaEnabled = $socialMediaEnabled ?? \App\Models\FeatureFlag::enabled('social_media');
 @endphp
 
-
+@php
+    $totalChatbots = Arr::get($data['chatbot_report'] ?? [], 'total_chatbots', 0);
+    $isNewUser     = $totalChatbots == 0 && Arr::get($data, 'total_post', 0) == 0;
+    $userName      = auth_user('web')?->name ?? 'there';
+    $firstName     = explode(' ', $userName)[0];
+@endphp
 
 <div id="overlay" class="overlay"></div>
 <button id="right-sidebar-btn" class="right-sidebar-btn fs-20">
     <i class="bi bi-activity"></i>
 </button>
+
+{{-- ══════════════════════════════════════════════════════
+     WELCOME BANNER + QUICK ACTIONS
+     ══════════════════════════════════════════════════════ --}}
+<div class="row g-4 mb-2">
+    <div class="col-12">
+        <div class="i-card" style="background:linear-gradient(135deg,#3b0764 0%,#6d28d9 60%,#7c3aed 100%);color:#fff;border:none;overflow:hidden;position:relative;">
+            {{-- decorative blobs --}}
+            <div style="position:absolute;width:220px;height:220px;background:rgba(255,255,255,.06);border-radius:50%;top:-60px;right:-60px;pointer-events:none;"></div>
+            <div style="position:absolute;width:140px;height:140px;background:rgba(255,255,255,.04);border-radius:50%;bottom:-40px;right:120px;pointer-events:none;"></div>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3" style="position:relative;z-index:1;">
+                <div>
+                    <p class="mb-1 fs-14" style="opacity:.8;">
+                        {{ $isNewUser ? translate("Welcome aboard 👋") : translate("Good to see you again 👋") }}
+                    </p>
+                    <h3 class="fw-bold mb-1" style="color:#fff;">{{ $firstName }}!</h3>
+                    <p class="mb-0 fs-14" style="opacity:.75;max-width:480px;">
+                        @if($isNewUser)
+                            {{ translate("Your account is ready. Pick something below to get started — it only takes a minute.") }}
+                        @else
+                            {{ translate("Here's a quick look at your workspace. Jump right back in.") }}
+                        @endif
+                    </p>
+                </div>
+                @if(!$subscription)
+                <a href="{{ route('user.plan') }}" class="i-btn btn--md"
+                    style="background:#fff;color:#6d28d9;font-weight:600;border:none;flex-shrink:0;">
+                    <i class="bi bi-lightning-charge me-1"></i>{{ translate('Upgrade Plan') }}
+                </a>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    {{-- ── Quick Action Cards ──────────────────────────────── --}}
+    @php
+        $quickActions = [
+            [
+                'icon'    => 'bi-robot',
+                'color'   => '#6d28d9',
+                'bg'      => '#f3f0ff',
+                'label'   => translate('AI Chatbot'),
+                'desc'    => translate('Build & deploy a smart chatbot for your site.'),
+                'cta'     => translate('Create Chatbot'),
+                'route'   => route('user.chatbot.create'),
+                'badge'   => $totalChatbots > 0 ? $totalChatbots . ' active' : null,
+            ],
+            [
+                'icon'    => 'bi-rocket-takeoff',
+                'color'   => '#dc2626',
+                'bg'      => '#fff1f2',
+                'label'   => translate('Social Media Boost'),
+                'desc'    => translate('Get followers, likes & views instantly.'),
+                'cta'     => translate('Browse Services'),
+                'route'   => route('user.smm.index'),
+                'badge'   => null,
+            ],
+            [
+                'icon'    => 'bi-envelope-paper',
+                'color'   => '#0891b2',
+                'bg'      => '#ecfeff',
+                'label'   => translate('Bulk Email'),
+                'desc'    => translate('Send email campaigns to your contacts.'),
+                'cta'     => translate('Create Campaign'),
+                'route'   => route('user.bulk-email.create'),
+                'badge'   => null,
+            ],
+            [
+                'icon'    => 'bi-phone',
+                'color'   => '#16a34a',
+                'bg'      => '#f0fdf4',
+                'label'   => translate('Bulk SMS'),
+                'desc'    => translate('Reach your audience with targeted SMS.'),
+                'cta'     => translate('Send SMS'),
+                'route'   => route('user.bulk-sms.create'),
+                'badge'   => null,
+            ],
+            [
+                'icon'    => 'bi-wallet2',
+                'color'   => '#b45309',
+                'bg'      => '#fffbeb',
+                'label'   => translate('Fund Wallet'),
+                'desc'    => translate('Top up to place orders and pay for services.'),
+                'cta'     => translate('Add Funds'),
+                'route'   => route('user.deposit.create'),
+                'badge'   => $subscription ? translate('Plan Active') : null,
+            ],
+        ];
+    @endphp
+
+    @foreach($quickActions as $action)
+    <div class="col-xl col-md-4 col-sm-6 col-12">
+        <a href="{{ $action['route'] }}" class="text-decoration-none d-block h-100">
+            <div class="i-card h-100 d-flex flex-column gap-2 position-relative"
+                style="border-left:4px solid {{ $action['color'] }};transition:transform .18s,box-shadow .18s;"
+                onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.10)'"
+                onmouseout="this.style.transform='';this.style.boxShadow=''">
+                @if($action['badge'])
+                <span class="badge position-absolute top-0 end-0 m-2 fs-11"
+                    style="background:{{ $action['color'] }};color:#fff;">{{ $action['badge'] }}</span>
+                @endif
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                        style="width:40px;height:40px;background:{{ $action['bg'] }};">
+                        <i class="bi {{ $action['icon'] }} fs-18" style="color:{{ $action['color'] }};"></i>
+                    </span>
+                    <span class="fw-semibold fs-15" style="color:#1e1b4b;">{{ $action['label'] }}</span>
+                </div>
+                <p class="fs-13 text-muted mb-2 flex-grow-1">{{ $action['desc'] }}</p>
+                <span class="fs-13 fw-semibold d-flex align-items-center gap-1" style="color:{{ $action['color'] }};">
+                    {{ $action['cta'] }} <i class="bi bi-arrow-right fs-12"></i>
+                </span>
+            </div>
+        </a>
+    </div>
+    @endforeach
+</div>
+
+{{-- ── Getting Started Checklist (new users only) ────────── --}}
+@if($isNewUser)
+<div class="row g-4 mb-2">
+    <div class="col-12">
+        <div class="i-card" style="border:2px dashed #c4b5fd;">
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <span class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                    style="width:44px;height:44px;background:#f3f0ff;">
+                    <i class="bi bi-map fs-20" style="color:#6d28d9;"></i>
+                </span>
+                <div>
+                    <h5 class="fw-bold mb-0">{{ translate('Getting Started') }}</h5>
+                    <p class="fs-13 text-muted mb-0">{{ translate('Follow these steps to make the most of your account.') }}</p>
+                </div>
+            </div>
+            <div class="row g-3">
+                @php
+                $steps = [
+                    [
+                        'num'   => '01',
+                        'color' => '#6d28d9',
+                        'bg'    => '#f3f0ff',
+                        'title' => translate('Fund Your Wallet'),
+                        'desc'  => translate('Add credits to your wallet to start ordering services and sending campaigns.'),
+                        'link'  => route('user.deposit.create'),
+                        'cta'   => translate('Add Funds'),
+                        'icon'  => 'bi-wallet2',
+                    ],
+                    [
+                        'num'   => '02',
+                        'color' => '#0891b2',
+                        'bg'    => '#ecfeff',
+                        'title' => translate('Create Your First Chatbot'),
+                        'desc'  => translate('Set up an AI chatbot to handle customer queries 24/7 on your website.'),
+                        'link'  => route('user.chatbot.create'),
+                        'cta'   => translate('Create Chatbot'),
+                        'icon'  => 'bi-robot',
+                    ],
+                    [
+                        'num'   => '03',
+                        'color' => '#dc2626',
+                        'bg'    => '#fff1f2',
+                        'title' => translate('Boost Your Social Media'),
+                        'desc'  => translate('Buy real followers, likes, and views for Instagram, TikTok, YouTube, and more.'),
+                        'link'  => route('user.smm.index'),
+                        'cta'   => translate('Browse Services'),
+                        'icon'  => 'bi-rocket-takeoff',
+                    ],
+                    [
+                        'num'   => '04',
+                        'color' => '#16a34a',
+                        'bg'    => '#f0fdf4',
+                        'title' => translate('Launch a Campaign'),
+                        'desc'  => translate('Send bulk SMS or email campaigns to your audience in one click.'),
+                        'link'  => route('user.bulk-email.index'),
+                        'cta'   => translate('Start Campaign'),
+                        'icon'  => 'bi-megaphone',
+                    ],
+                ];
+                @endphp
+                @foreach($steps as $step)
+                <div class="col-xl-3 col-md-6">
+                    <div class="p-3 rounded-3 h-100 d-flex flex-column gap-2"
+                        style="background:{{ $step['bg'] }};border:1px solid rgba(0,0,0,.06);">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="fw-black fs-28 lh-1" style="color:{{ $step['color'] }};opacity:.18;font-variant-numeric:tabular-nums;min-width:38px;">{{ $step['num'] }}</span>
+                            <i class="bi {{ $step['icon'] }} fs-22" style="color:{{ $step['color'] }};"></i>
+                        </div>
+                        <h6 class="fw-semibold mb-1">{{ $step['title'] }}</h6>
+                        <p class="fs-13 text-muted flex-grow-1 mb-2">{{ $step['desc'] }}</p>
+                        <a href="{{ $step['link'] }}" class="i-btn btn--sm capsuled"
+                            style="background:{{ $step['color'] }};color:#fff;border:none;width:fit-content;">
+                            {{ $step['cta'] }} <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 
 <div class="row g-4 mb-4">
     <div class="col">
