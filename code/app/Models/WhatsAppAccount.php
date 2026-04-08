@@ -6,6 +6,7 @@ use Illuminate\Support\Str;
 
 class WhatsAppAccount extends Model
 {
+    protected $table = 'whatsapp_accounts';
     protected $guarded = [];
 
     protected static function booted(): void
