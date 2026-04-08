@@ -6,6 +6,7 @@ use Illuminate\Support\Str;
 
 class WhatsAppMessage extends Model
 {
+    protected $table = 'whatsapp_messages';
     protected $guarded = [];
 
     protected static function booted(): void
