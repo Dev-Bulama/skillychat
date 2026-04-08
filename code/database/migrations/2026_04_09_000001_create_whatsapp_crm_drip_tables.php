@@ -44,7 +44,7 @@ return new class extends Migration
             $table->text('content');
             $table->string('media_url')->nullable();
             $table->enum('status', ['received', 'sent', 'delivered', 'read', 'failed'])->default('received');
-            $table->foreignId('crm_lead_id')->nullable()->constrained('crm_leads')->nullOnDelete();
+            $table->unsignedBigInteger('crm_lead_id')->nullable()->index(); // FK added after crm_leads is created
             $table->timestamps();
         });
 
@@ -153,7 +153,6 @@ return new class extends Migration
         Schema::create('drip_enrollments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('sequence_id')->constrained('drip_sequences')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('contact_name')->nullable();
             $table->string('contact_email')->nullable()->index();
             $table->string('contact_phone')->nullable();

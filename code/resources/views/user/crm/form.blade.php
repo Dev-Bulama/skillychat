@@ -4,7 +4,7 @@
     <div class="col-xl-9">
         <div class="i-card-md">
             <div class="card--header">
-                <h4 class="card-title"><i class="bi bi-person-plus me-2" style="color:#6d28d9;"></i>{{ $title }}</h4>
+                <h4 class="card-title"><i class="bi bi-person-plus me-2" style="color:#6d28d9;"></i>{{ $lead ? translate('Edit Lead') : translate('Add Lead') }}</h4>
                 <a href="{{ route('user.crm.index') }}" class="i-btn btn--sm btn--outline"><i class="bi bi-arrow-left me-1"></i>{{ translate('Back') }}</a>
             </div>
             <div class="card-body">
