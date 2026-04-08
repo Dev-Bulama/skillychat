@@ -108,7 +108,7 @@
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">{{ translate('Follow-up Date') }}</label>
                             <input type="datetime-local" name="follow_up_at" class="form-control"
-                                value="{{ old('follow_up_at', $lead->follow_up_at ? $lead->follow_up_at->format('Y-m-d\TH:i') : '') }}">
+                            value="{{ old('follow_up_at', $lead && $lead->follow_up_at ? $lead->follow_up_at->format('Y-m-d\TH:i') : '') }}">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">{{ translate('Tags') }}</label>
