@@ -111,6 +111,7 @@ class Kernel extends HttpKernel
         'maintenance.mode' => MaintenanceMode::class,
         'domain.verified'  => VerifyDomain::class,
         'check.domain'     => DomainVerificationMiddleware::class,
+        'subscription'     => \App\Http\Middleware\RequiresSubscription::class,
 
 
 

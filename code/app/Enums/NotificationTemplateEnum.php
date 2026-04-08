@@ -33,6 +33,7 @@ enum NotificationTemplateEnum :string {
     case SUBSCRIPTION_STATUS            = 'SUBSCRIPTION_STATUS';
     case SUBSCRIPTION_FAILED            = 'SUBSCRIPTION_FAILED';
     case SUBSCRIPTION_EXPIRED           = 'SUBSCRIPTION_EXPIRED';
+    case SUBSCRIPTION_REMINDER          = 'SUBSCRIPTION_REMINDER';
     case CONTACT_REPLY                  = 'CONTACT_REPLY';
 
 
@@ -355,6 +356,17 @@ enum NotificationTemplateEnum :string {
                             "template_key" => ([
                                 'time'           => "Time",
                                 'name'           => "Package name"
+                            ])
+                        ],
+                        self::SUBSCRIPTION_REMINDER->value => [
+                            "name"      => k2t(self::SUBSCRIPTION_REMINDER->value),
+                            "subject"   => "Your Subscription is Expiring Soon",
+                            "body"      => "Hi {{name}}, this is a reminder that your <strong>{{plan_name}}</strong> subscription is expiring soon.<br><br>Status: {{status}}<br><br>Please renew your plan before it expires to keep your chatbot, bulk SMS, and email campaigns running without interruption.<br><br>Thank you for being with us!",
+                            "sms_body"  => "Hi {{name}}, your {{plan_name}} subscription expires on {{time}}. Please renew to keep access to your features.",
+                            "template_key" => ([
+                                'plan_name' => "Plan / Package Name",
+                                'status'    => "Expiry Status Message",
+                                'time'      => "Expiry Date",
                             ])
                         ],
                         self::CONTACT_REPLY->value => [
