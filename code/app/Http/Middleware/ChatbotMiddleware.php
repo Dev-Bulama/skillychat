@@ -168,7 +168,7 @@ class ChatbotMiddleware
             return false;
         }
 
-        if ($subscription->expired_date && now()->greaterThan($subscription->expired_date)) {
+        if ($subscription->expired_at && now()->greaterThan(\Carbon\Carbon::parse($subscription->expired_at)->endOfDay())) {
             return false;
         }
 

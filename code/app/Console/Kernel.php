@@ -14,6 +14,12 @@ class Kernel extends ConsoleKernel
     {
         // Sync SMM order statuses every 10 minutes
         $schedule->job(new \App\Jobs\SyncSMMOrderStatuses())->everyTenMinutes();
+
+        // Expire subscriptions whose expired_at date has passed (runs just after midnight)
+        $schedule->job(new \App\Jobs\ExpireSubscriptions())->dailyAt('00:05');
+
+        // Send renewal reminder emails 7, 3, and 1 day before expiry (runs at 8 AM)
+        $schedule->job(new \App\Jobs\SendSubscriptionReminders())->dailyAt('08:00');
     }
 
     /**

@@ -189,6 +189,7 @@ use Illuminate\Support\Facades\Http;
                 });
 
                 Route::get('/plans', 'plan')->name('plan');
+                Route::get('/subscription/required', fn() => view('user.subscription_required'))->name('subscription.required');
 
                 #kyc route
                 Route::prefix("/kyc")->name('kyc.')->withoutMiddleware(['kyc'])->group(function(){
@@ -330,7 +331,7 @@ use Illuminate\Support\Facades\Http;
          });
 
          #chatbot management routes
-         Route::controller(ChatbotController::class)->name('chatbot.')->prefix('chatbot/')->group(function () {
+         Route::controller(ChatbotController::class)->name('chatbot.')->prefix('chatbot/')->middleware('subscription')->group(function () {
              Route::get('/list', 'index')->name('index');
              Route::get('/create', 'create')->name('create');
              Route::post('/store', 'store')->name('store');
@@ -357,7 +358,7 @@ use Illuminate\Support\Facades\Http;
          });
 
          # ── Bulk SMS ─────────────────────────────────────────────────────────────────
-         Route::controller(BulkSmsController::class)->name('bulk-sms.')->prefix('bulk-sms/')->group(function () {
+         Route::controller(BulkSmsController::class)->name('bulk-sms.')->prefix('bulk-sms/')->middleware('subscription')->group(function () {
              Route::get('/campaigns',             'index')->name('index');
              Route::get('/campaigns/create',      'create')->name('create');
              Route::post('/campaigns/store',      'store')->name('store');
@@ -391,7 +392,7 @@ use Illuminate\Support\Facades\Http;
          });
 
          # ── Bulk Email ────────────────────────────────────────────────────────────────
-         Route::controller(BulkEmailController::class)->name('bulk-email.')->prefix('bulk-email/')->group(function () {
+         Route::controller(BulkEmailController::class)->name('bulk-email.')->prefix('bulk-email/')->middleware('subscription')->group(function () {
              Route::get('/campaigns',             'index')->name('index');
              Route::get('/campaigns/create',      'create')->name('create');
              Route::post('/campaigns/store',      'store')->name('store');
