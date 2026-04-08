@@ -414,6 +414,59 @@ use Illuminate\Support\Facades\Http;
              Route::post('/{keyId}/set-default', 'setDefaultApiKey')->name('set-default');
          });
 
+         # ── WhatsApp Accounts ─────────────────────────────────────────────────────
+         Route::controller(\App\Http\Controllers\User\WhatsAppController::class)->name('whatsapp.')->prefix('whatsapp/')->group(function () {
+             Route::get('/',                          'index')->name('index');
+             Route::get('/create',                    'create')->name('create');
+             Route::post('/store',                    'store')->name('store');
+             Route::get('/{uid}/edit',                'edit')->name('edit');
+             Route::put('/{uid}/update',              'update')->name('update');
+             Route::delete('/{uid}/destroy',          'destroy')->name('destroy');
+             Route::get('/{uid}/messages',            'messages')->name('messages');
+             Route::post('/{uid}/send',               'sendMessage')->name('send');
+             Route::get('/{uid}/test',                'test')->name('test');
+             Route::get('/documentation',             'documentation')->name('documentation');
+         });
+
+         # ── CRM ───────────────────────────────────────────────────────────────────
+         Route::controller(\App\Http\Controllers\User\CrmController::class)->name('crm.')->prefix('crm/')->group(function () {
+             Route::get('/board',                     'index')->name('index');
+             Route::get('/leads',                     'leads')->name('leads');
+             Route::get('/leads/create',              'create')->name('create');
+             Route::post('/leads/store',              'store')->name('store');
+             Route::get('/leads/{uid}',               'show')->name('show');
+             Route::get('/leads/{uid}/edit',          'edit')->name('edit');
+             Route::put('/leads/{uid}/update',        'update')->name('update');
+             Route::delete('/leads/{uid}/destroy',    'destroy')->name('destroy');
+             Route::post('/update-stage',             'updateStage')->name('update-stage');
+             Route::post('/leads/{uid}/note',         'addNote')->name('note');
+             Route::get('/pipeline-setup',            'pipelineSetup')->name('pipeline');
+             Route::post('/pipelines/store',          'storePipeline')->name('pipeline.store');
+             Route::delete('/pipelines/{uid}/destroy','destroyPipeline')->name('pipeline.destroy');
+             Route::post('/stages/store',             'storeStage')->name('stage.store');
+             Route::delete('/stages/{id}/destroy',    'destroyStage')->name('stage.destroy');
+             Route::get('/demo-data',                 'demoData')->name('demo-data');
+         });
+
+         # ── Drip Sequences ────────────────────────────────────────────────────────
+         Route::controller(\App\Http\Controllers\User\DripSequenceController::class)->name('drip.')->prefix('drip/')->group(function () {
+             Route::get('/',                                    'index')->name('index');
+             Route::get('/create',                             'create')->name('create');
+             Route::get('/demo-data',                          'demoData')->name('demo-data');
+             Route::post('/store',                             'store')->name('store');
+             Route::post('/enrollments/{id}/unenroll',         'unenroll')->name('unenroll');
+             Route::get('/{uid}',                              'show')->name('show');
+             Route::get('/{uid}/edit',                         'edit')->name('edit');
+             Route::put('/{uid}/update',                       'update')->name('update');
+             Route::delete('/{uid}/destroy',                   'destroy')->name('destroy');
+             Route::post('/{uid}/activate',                    'activate')->name('activate');
+             Route::post('/{uid}/pause',                       'pause')->name('pause');
+             Route::post('/{uid}/steps/store',                 'storeStep')->name('step.store');
+             Route::delete('/{uid}/steps/{stepId}/destroy',    'destroyStep')->name('step.destroy');
+             Route::post('/{uid}/steps/reorder',               'reorderSteps')->name('steps.reorder');
+             Route::post('/{uid}/enroll',                      'enroll')->name('enroll');
+         });
+
          #live agent routes
          Route::controller(LiveAgentController::class)->name('live-agent.')->prefix('live-agent/')->group(function () {
              Route::get('/dashboard', 'dashboard')->name('dashboard');
@@ -516,6 +569,15 @@ use Illuminate\Support\Facades\Http;
 
 
     Route::get('/access-denied', [CoreController::class, 'accessDenied'])->name('access.denied')->middleware(['sanitizer','firewall.all']);
+
+    # ── WhatsApp Webhook (public, no auth) ──────────────────────────────────────
+    Route::controller(\App\Http\Controllers\Api\WhatsAppWebhookController::class)
+        ->prefix('webhook/whatsapp')
+        ->withoutMiddleware(['auth', 'web', 'sanitizer'])
+        ->group(function () {
+            Route::get('/{verifyToken}',  'verify')->name('whatsapp.webhook.verify');
+            Route::post('/{verifyToken}', 'receive')->name('whatsapp.webhook.receive');
+        });
 
 
 
