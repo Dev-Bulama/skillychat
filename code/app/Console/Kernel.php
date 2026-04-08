@@ -20,6 +20,9 @@ class Kernel extends ConsoleKernel
 
         // Send renewal reminder emails 7, 3, and 1 day before expiry (runs at 8 AM)
         $schedule->job(new \App\Jobs\SendSubscriptionReminders())->dailyAt('08:00');
+
+        // Process drip sequence steps every 5 minutes
+        $schedule->job(new \App\Jobs\ProcessDripSequences())->everyFiveMinutes();
     }
 
     /**

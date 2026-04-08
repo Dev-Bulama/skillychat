@@ -4,9 +4,12 @@
     $subscription = $user->runningSubscription;
     $webhookAccess = @optional($subscription->package->social_access)->webhook_access;
     $accessPlatforms = (array) ($subscription ? @$subscription?->package?->social_access?->platform_access : []);
-    $socialMediaEnabled = \App\Models\FeatureFlag::enabled('social_media');
-    $bulkSmsEnabled     = \App\Models\FeatureFlag::enabled('bulk_sms');
-    $bulkEmailEnabled   = \App\Models\FeatureFlag::enabled('bulk_email');
+    $socialMediaEnabled  = \App\Models\FeatureFlag::enabled('social_media');
+    $bulkSmsEnabled      = \App\Models\FeatureFlag::enabled('bulk_sms');
+    $bulkEmailEnabled    = \App\Models\FeatureFlag::enabled('bulk_email');
+    $whatsappEnabled     = \App\Models\FeatureFlag::enabled('whatsapp_chatbot');
+    $leadCrmEnabled      = \App\Models\FeatureFlag::enabled('lead_crm');
+    $dripEnabled         = \App\Models\FeatureFlag::enabled('drip_sequences');
 
     $platforms = get_platform()
     ->whereIn('id', $accessPlatforms )
@@ -314,6 +317,90 @@
                                 <li class="sub-menu-item">
                                     <a class="sidebar-menu-link {{request()->routeIs('user.bulk-sms.provider*') ? 'active' :''}}" href="{{route('user.bulk-sms.provider')}}">
                                         <span><i class="bi bi-gear"></i></span><p>{{translate('SMS Provider')}}</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    @endif
+
+                    @if($whatsappEnabled)
+                    <li class="sidemenu-item">
+                        <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse @if(request()->routeIs('user.whatsapp.*')) active @endif">
+                            <div class="sidemenu-icon"><i class="bi bi-whatsapp" style="color:#25d366;"></i></div>
+                            <span>{{ translate('WhatsApp') }} <small><i class="bi bi-chevron-down"></i></small></span>
+                        </a>
+                        <div class="side-menu-dropdown @if(request()->routeIs('user.whatsapp.*')) show-sideMenu @endif">
+                            <ul class="sub-menu">
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.whatsapp.index') ? 'active' : '' }}" href="{{ route('user.whatsapp.index') }}">
+                                        <span><i class="bi bi-phone"></i></span><p>{{ translate('Accounts') }}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.whatsapp.create') ? 'active' : '' }}" href="{{ route('user.whatsapp.create') }}">
+                                        <span><i class="bi bi-plus-circle"></i></span><p>{{ translate('Add Account') }}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.whatsapp.documentation') ? 'active' : '' }}" href="{{ route('user.whatsapp.documentation') }}">
+                                        <span><i class="bi bi-book"></i></span><p>{{ translate('Setup Guide') }}</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    @endif
+
+                    @if($leadCrmEnabled)
+                    <li class="sidemenu-item">
+                        <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse @if(request()->routeIs('user.crm.*')) active @endif">
+                            <div class="sidemenu-icon"><i class="bi bi-kanban" style="color:#6d28d9;"></i></div>
+                            <span>{{ translate('Lead CRM') }} <small><i class="bi bi-chevron-down"></i></small></span>
+                        </a>
+                        <div class="side-menu-dropdown @if(request()->routeIs('user.crm.*')) show-sideMenu @endif">
+                            <ul class="sub-menu">
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.crm.index') ? 'active' : '' }}" href="{{ route('user.crm.index') }}">
+                                        <span><i class="bi bi-layout-three-columns"></i></span><p>{{ translate('Kanban Board') }}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.crm.leads') ? 'active' : '' }}" href="{{ route('user.crm.leads') }}">
+                                        <span><i class="bi bi-people"></i></span><p>{{ translate('All Leads') }}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.crm.create') ? 'active' : '' }}" href="{{ route('user.crm.create') }}">
+                                        <span><i class="bi bi-person-plus"></i></span><p>{{ translate('Add Lead') }}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.crm.pipeline') ? 'active' : '' }}" href="{{ route('user.crm.pipeline') }}">
+                                        <span><i class="bi bi-gear"></i></span><p>{{ translate('Pipeline Setup') }}</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    @endif
+
+                    @if($dripEnabled)
+                    <li class="sidemenu-item">
+                        <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse @if(request()->routeIs('user.drip.*')) active @endif">
+                            <div class="sidemenu-icon"><i class="bi bi-funnel" style="color:#dc2626;"></i></div>
+                            <span>{{ translate('Drip Sequences') }} <small><i class="bi bi-chevron-down"></i></small></span>
+                        </a>
+                        <div class="side-menu-dropdown @if(request()->routeIs('user.drip.*')) show-sideMenu @endif">
+                            <ul class="sub-menu">
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.drip.index') ? 'active' : '' }}" href="{{ route('user.drip.index') }}">
+                                        <span><i class="bi bi-list-ul"></i></span><p>{{ translate('My Sequences') }}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.drip.create') ? 'active' : '' }}" href="{{ route('user.drip.create') }}">
+                                        <span><i class="bi bi-plus-circle"></i></span><p>{{ translate('New Sequence') }}</p>
                                     </a>
                                 </li>
                             </ul>
