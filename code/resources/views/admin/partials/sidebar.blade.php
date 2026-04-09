@@ -791,6 +791,14 @@
                                 </p>
                             </a>
                         </li>
+                        <li class="sub-menu-item">
+                            <a class='sidebar-menu-link {{ sidebar_awake('admin.setting.whatsapp') }}' href='{{ route('admin.setting.whatsapp') }}'>
+                                <span><i class="bi bi-whatsapp" style="color:#25d366;font-size:12px;"></i></span>
+                                <p>
+                                    {{ translate('WhatsApp API') }}
+                                </p>
+                            </a>
+                        </li>
                         @endif
                     </ul>
                 </div>
