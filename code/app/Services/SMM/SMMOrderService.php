@@ -70,6 +70,7 @@ class SMMOrderService
 
     /**
      * Send a pending order to its provider.
+     * Throws on failure so the job can retry.
      */
     public function sendToProvider(SMMOrder $order): void
     {
@@ -78,11 +79,16 @@ class SMMOrderService
         $provider = $service->provider;
 
         if (!$provider || !$provider->isActive()) {
-            $this->markFailed($order, 'Provider is inactive or missing.');
-            return;
+            throw new \RuntimeException('Provider is inactive or missing.');
         }
 
         $driver = SMMProviderFactory::make($provider);
+
+        $requestPayload = [
+            'service'  => $service->provider_service_id,
+            'link'     => $order->target_link,
+            'quantity' => $order->quantity,
+        ];
 
         try {
             $result = $driver->placeOrder(
@@ -92,19 +98,15 @@ class SMMOrderService
             );
 
             $order->update([
-                'provider_order_id'  => $result['provider_order_id'],
-                'status'             => SMMOrderStatus::PROCESSING->value,
-                'sent_to_provider_at'=> now(),
+                'provider_order_id'   => $result['provider_order_id'],
+                'status'              => SMMOrderStatus::PROCESSING->value,
+                'sent_to_provider_at' => now(),
             ]);
 
             SMMOrderLog::create([
                 'order_id'         => $order->id,
                 'action'           => 'place_order',
-                'request_payload'  => [
-                    'service'  => $service->provider_service_id,
-                    'link'     => $order->target_link,
-                    'quantity' => $order->quantity,
-                ],
+                'request_payload'  => $requestPayload,
                 'response_payload' => $result,
                 'success'          => true,
                 'http_status'      => '200',
@@ -113,12 +115,13 @@ class SMMOrderService
             SMMOrderLog::create([
                 'order_id'         => $order->id,
                 'action'           => 'place_order',
-                'request_payload'  => [],
+                'request_payload'  => $requestPayload,
                 'response_payload' => ['error' => $e->getMessage()],
                 'success'          => false,
                 'http_status'      => '500',
             ]);
-            $this->markFailed($order, $e->getMessage());
+            // Re-throw so the job can retry; failed() handles final cleanup
+            throw $e;
         }
     }
 
@@ -232,7 +235,57 @@ class SMMOrderService
         }
     }
 
-    private function markFailed(SMMOrder $order, string $reason): void
+    /**
+     * Auto-refund after job exhausts all retries.
+     * Does NOT check canBeRefunded() — order may still be PENDING at this point.
+     */
+    public function autoRefund(SMMOrder $order): void
+    {
+        DB::beginTransaction();
+        try {
+            $user = $order->fresh()->user;
+            $user->balance = bcadd((string) $user->balance, (string) $order->charge, 4);
+            $user->save();
+
+            Transaction::create([
+                'user_id'      => $user->id,
+                'trx_code'     => strtoupper('SMRFD' . uniqid()),
+                'trx_type'     => Transaction::$PLUS,
+                'amount'       => $order->charge,
+                'remarks'      => 'smm_boost_auto_refund',
+                'post_balance' => $user->balance,
+                'currency_id'  => optional($user->currency)->id,
+            ]);
+
+            $order->update(['status' => SMMOrderStatus::REFUNDED->value]);
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('[SMM] Auto-refund failed', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Reset a failed order to PENDING and re-dispatch to provider (admin action).
+     */
+    public function retryOrder(SMMOrder $order): void
+    {
+        if ($order->status !== SMMOrderStatus::FAILED->value) {
+            throw new \RuntimeException('Only FAILED orders can be retried.');
+        }
+
+        $order->update([
+            'status'             => SMMOrderStatus::PENDING->value,
+            'remarks'            => null,
+            'provider_order_id'  => null,
+            'sent_to_provider_at'=> null,
+        ]);
+
+        dispatch(new \App\Jobs\ProcessSMMOrder($order->id));
+    }
+
+    public function markFailed(SMMOrder $order, string $reason): void
     {
         $order->update([
             'status'  => SMMOrderStatus::FAILED->value,

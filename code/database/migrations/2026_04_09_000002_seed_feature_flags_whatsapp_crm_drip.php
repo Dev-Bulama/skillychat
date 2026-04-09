@@ -24,6 +24,12 @@ return new class extends Migration
             'description' => 'Automated multi-step messaging sequences via Email, SMS, and WhatsApp triggered by lead events or manual enrollment.',
             'is_enabled'  => true,
         ],
+        [
+            'name'        => 'invoices',
+            'label'       => 'Invoice Generator',
+            'description' => 'Create, manage, and send professional invoices with auto-numbering, VAT, discounts, and email delivery.',
+            'is_enabled'  => true,
+        ],
     ];
 
     public function up(): void

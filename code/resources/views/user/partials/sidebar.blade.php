@@ -10,6 +10,7 @@
     $whatsappEnabled     = \App\Models\FeatureFlag::enabled('whatsapp_chatbot');
     $leadCrmEnabled      = \App\Models\FeatureFlag::enabled('lead_crm');
     $dripEnabled         = \App\Models\FeatureFlag::enabled('drip_sequences');
+    $invoiceEnabled      = \App\Models\FeatureFlag::enabled('invoices');
 
     $platforms = get_platform()
     ->whereIn('id', $accessPlatforms )
@@ -401,6 +402,29 @@
                                 <li class="sub-menu-item">
                                     <a class="sidebar-menu-link {{ request()->routeIs('user.drip.create') ? 'active' : '' }}" href="{{ route('user.drip.create') }}">
                                         <span><i class="bi bi-plus-circle"></i></span><p>{{ translate('New Sequence') }}</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    @endif
+
+                    @if($invoiceEnabled)
+                    <li class="sidemenu-item">
+                        <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse @if(request()->routeIs('user.invoice.*')) active @endif">
+                            <div class="sidemenu-icon"><i class="bi bi-receipt" style="color:#0ea5e9;"></i></div>
+                            <span>{{ translate('Invoices') }} <small><i class="bi bi-chevron-down"></i></small></span>
+                        </a>
+                        <div class="side-menu-dropdown @if(request()->routeIs('user.invoice.*')) show-sideMenu @endif">
+                            <ul class="sub-menu">
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.invoice.index') ? 'active' : '' }}" href="{{ route('user.invoice.index') }}">
+                                        <span><i class="bi bi-list-ul"></i></span><p>{{ translate('All Invoices') }}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.invoice.create') ? 'active' : '' }}" href="{{ route('user.invoice.create') }}">
+                                        <span><i class="bi bi-plus-circle"></i></span><p>{{ translate('New Invoice') }}</p>
                                     </a>
                                 </li>
                             </ul>

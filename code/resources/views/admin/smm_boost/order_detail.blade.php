@@ -93,6 +93,17 @@
                 </form>
                 @endif
 
+                {{-- Retry --}}
+                @if($order->status === 'failed')
+                <form action="{{ route('admin.smm.orders.retry', $order->id) }}" method="post" class="mb-3"
+                    onsubmit="return confirm('{{ translate('Retry sending this order to the provider?') }}')">
+                    @csrf
+                    <button type="submit" class="i-btn btn--sm btn--primary w-100">
+                        <i class="bi bi-arrow-repeat me-1"></i>{{ translate('Retry — Resend to Provider') }}
+                    </button>
+                </form>
+                @endif
+
                 {{-- Refund --}}
                 @if($order->canBeRefunded())
                 <form action="{{ route('admin.smm.orders.refund', $order->id) }}" method="post" class="mb-3"

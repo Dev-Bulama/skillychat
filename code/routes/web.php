@@ -448,6 +448,20 @@ use Illuminate\Support\Facades\Http;
              Route::get('/demo-data',                 'demoData')->name('demo-data');
          });
 
+         # ── Invoices ──────────────────────────────────────────────────────────────
+         Route::controller(\App\Http\Controllers\User\InvoiceController::class)->name('invoice.')->prefix('invoices/')->group(function () {
+             Route::get('/',                    'index')->name('index');
+             Route::get('/create',              'create')->name('create');
+             Route::post('/store',              'store')->name('store');
+             Route::get('/{uid}',               'show')->name('show');
+             Route::get('/{uid}/edit',          'edit')->name('edit');
+             Route::put('/{uid}/update',        'update')->name('update');
+             Route::delete('/{uid}/destroy',    'destroy')->name('destroy');
+             Route::get('/{uid}/print',         'print')->name('print');
+             Route::post('/{uid}/mark-paid',    'markPaid')->name('mark-paid');
+             Route::post('/{uid}/send-email',   'sendEmail')->name('send-email');
+         });
+
          # ── Drip Sequences ────────────────────────────────────────────────────────
          Route::controller(\App\Http\Controllers\User\DripSequenceController::class)->name('drip.')->prefix('drip/')->group(function () {
              Route::get('/',                                    'index')->name('index');

@@ -368,4 +368,46 @@ HTML;
         optimize_clear();
         return redirect()->back()->with('success', translate('Documentation saved successfully.'));
     }
+
+    /**
+     * Admin WhatsApp API global settings (one-time setup).
+     */
+    public function whatsappSettings(): \Illuminate\View\View
+    {
+        return view('admin.setting.whatsapp', [
+            'title' => 'WhatsApp API Settings',
+        ]);
+    }
+
+    public function saveWhatsappSettings(\Illuminate\Http\Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $request->validate([
+            'whatsapp_default_app_id'           => 'nullable|string|max:255',
+            'whatsapp_default_waba_id'          => 'nullable|string|max:255',
+            'whatsapp_default_access_token'     => 'nullable|string',
+            'whatsapp_default_phone_number_id'  => 'nullable|string|max:255',
+            'whatsapp_default_welcome_message'  => 'nullable|string',
+            'whatsapp_default_fallback_message' => 'nullable|string',
+        ]);
+
+        $keys = [
+            'whatsapp_default_app_id',
+            'whatsapp_default_waba_id',
+            'whatsapp_default_access_token',
+            'whatsapp_default_phone_number_id',
+            'whatsapp_default_welcome_message',
+            'whatsapp_default_fallback_message',
+        ];
+
+        foreach ($keys as $key) {
+            \Illuminate\Support\Facades\DB::table('settings')->upsert(
+                [['key' => $key, 'value' => $request->input($key, '')]],
+                ['key'],
+                ['value']
+            );
+        }
+
+        optimize_clear();
+        return back()->with(response_status('WhatsApp API settings saved.'));
+    }
 }
