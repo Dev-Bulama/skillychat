@@ -129,22 +129,26 @@ class GenericSMMProvider implements SMMProviderInterface
 
     protected function post(array $params): array
     {
-        try {
-            $payload = array_merge(['key' => $this->apiKey], $params);
+        $payload = array_merge(['key' => $this->apiKey], $params);
 
-            $response = Http::timeout(30)
-                ->asForm()
-                ->post($this->apiUrl, $payload);
+        $response = Http::timeout(30)
+            ->asForm()
+            ->post($this->apiUrl, $payload);
 
-            $json = $response->json();
-            return is_array($json) ? $json : [];
-        } catch (\Throwable $e) {
-            Log::error('[SMM Provider] API call failed', [
-                'provider' => $this->provider->name,
-                'params'   => $params,
-                'error'    => $e->getMessage(),
-            ]);
-            return [];
+        if ($response->failed()) {
+            throw new \RuntimeException(
+                "Provider HTTP error {$response->status()} from {$this->provider->name}"
+            );
         }
+
+        $json = $response->json();
+
+        if (!is_array($json)) {
+            throw new \RuntimeException(
+                "Provider returned non-JSON response from {$this->provider->name}: " . $response->body()
+            );
+        }
+
+        return $json;
     }
 }

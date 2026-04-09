@@ -459,4 +459,15 @@ class SMMBoostController extends Controller
         return back()->with(response_status('Order synced with provider.'));
     }
 
+    public function retryOrder(int $id): RedirectResponse
+    {
+        $order = SMMOrder::with('service.provider')->findOrFail($id);
+        try {
+            $this->orderService->retryOrder($order);
+            return back()->with(response_status('Order resubmitted to provider.'));
+        } catch (\RuntimeException $e) {
+            return back()->with(response_status($e->getMessage(), 'error'));
+        }
+    }
+
 }

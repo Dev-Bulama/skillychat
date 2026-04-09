@@ -368,6 +368,10 @@ Route::middleware([
             Route::get('/frontend-mode',  'frontendMode')->name('frontend.mode');
             Route::post('/frontend-mode', 'saveFrontendMode')->name('frontend.mode.save');
 
+            # WhatsApp API global settings
+            Route::get('/whatsapp',  'whatsappSettings')->name('whatsapp');
+            Route::post('/whatsapp', 'saveWhatsappSettings')->name('whatsapp.save');
+
         });
 
         #Category section refactored
@@ -707,6 +711,7 @@ Route::middleware([
             Route::post('/orders/{id}/update-status',     'updateOrderStatus')->name('orders.update-status');
             Route::post('/orders/{id}/refund',            'refundOrder')->name('orders.refund');
             Route::post('/orders/{id}/sync',              'syncOrder')->name('orders.sync');
+            Route::post('/orders/{id}/retry',             'retryOrder')->name('orders.retry');
         });
 
         /** Feature Flags */
