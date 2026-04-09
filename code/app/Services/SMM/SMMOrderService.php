@@ -3,7 +3,6 @@
 namespace App\Services\SMM;
 
 use App\Enums\SMMOrderStatus;
-use App\Enums\StatusEnum;
 use App\Models\SMMOrder;
 use App\Models\SMMOrderLog;
 use App\Models\SMMService;
@@ -16,7 +15,8 @@ class SMMOrderService
 {
     /**
      * Place a new SMM order for a user.
-     * Deducts from wallet, creates order, dispatches to provider.
+     * Deducts from wallet, creates order, then immediately sends to provider.
+     * Does NOT use a queue — works on shared hosting with no worker.
      */
     public function placeOrder(User $user, SMMService $service, string $targetLink, int $quantity): SMMOrder
     {
@@ -26,13 +26,12 @@ class SMMOrderService
             throw new \RuntimeException('Insufficient wallet balance.');
         }
 
+        // ── 1. Wallet deduction + order creation (atomic) ──────────────────
         DB::beginTransaction();
         try {
-            // Deduct wallet
             $user->balance = bcsub((string) $user->balance, (string) $charge, 4);
             $user->save();
 
-            // Transaction log (minus)
             Transaction::create([
                 'user_id'      => $user->id,
                 'trx_code'     => strtoupper('SMM' . uniqid()),
@@ -57,38 +56,75 @@ class SMMOrderService
             ]);
 
             DB::commit();
-
-            // Dispatch to provider asynchronously (or sync if queue not configured)
-            dispatch(new \App\Jobs\ProcessSMMOrder($order->id));
-
-            return $order;
         } catch (\Throwable $e) {
             DB::rollBack();
             throw $e;
         }
+
+        // ── 2. Send to provider immediately (outside transaction) ───────────
+        // If this fails the order is marked FAILED and auto-refunded.
+        // Admin can retry via the order detail page.
+        try {
+            $order->load('service.provider');
+            $this->sendToProvider($order);
+        } catch (\Throwable $e) {
+            // sendToProvider() already wrote the log and marked FAILED.
+            // Auto-refund the user so they are not charged for a failed order.
+            try {
+                $this->autoRefund($order->fresh());
+            } catch (\Throwable $refundEx) {
+                Log::error('[SMM] Auto-refund failed after provider error', [
+                    'order_id' => $order->id,
+                    'error'    => $refundEx->getMessage(),
+                ]);
+            }
+        }
+
+        return $order->fresh();
     }
 
     /**
      * Send a pending order to its provider.
-     * Throws on failure so the job can retry.
+     * ALWAYS writes an SMMOrderLog entry — whether success or failure.
+     * Throws on failure so callers know what happened.
      */
     public function sendToProvider(SMMOrder $order): void
     {
-        $order->load('service.provider');
+        $order->loadMissing('service.provider');
+
         $service  = $order->service;
-        $provider = $service->provider;
-
-        if (!$provider || !$provider->isActive()) {
-            throw new \RuntimeException('Provider is inactive or missing.');
-        }
-
-        $driver = SMMProviderFactory::make($provider);
+        $provider = $service->provider ?? null;
 
         $requestPayload = [
-            'service'  => $service->provider_service_id,
+            'service'  => $service->provider_service_id ?? null,
             'link'     => $order->target_link,
             'quantity' => $order->quantity,
         ];
+
+        // ── Pre-flight checks (always log even on config error) ─────────────
+        if (!$provider) {
+            $error = 'No provider configured for this service.';
+            $this->writeLog($order, 'place_order', $requestPayload, ['error' => $error], false, '000');
+            $this->markFailed($order, $error);
+            throw new \RuntimeException($error);
+        }
+
+        if (!$provider->isActive()) {
+            $error = 'Provider "' . $provider->name . '" is currently inactive.';
+            $this->writeLog($order, 'place_order', $requestPayload, ['error' => $error], false, '000');
+            $this->markFailed($order, $error);
+            throw new \RuntimeException($error);
+        }
+
+        if (empty($provider->api_url) || empty($provider->api_key)) {
+            $error = 'Provider "' . $provider->name . '" is missing API URL or API Key.';
+            $this->writeLog($order, 'place_order', $requestPayload, ['error' => $error], false, '000');
+            $this->markFailed($order, $error);
+            throw new \RuntimeException($error);
+        }
+
+        // ── Call provider API ────────────────────────────────────────────────
+        $driver = SMMProviderFactory::make($provider);
 
         try {
             $result = $driver->placeOrder(
@@ -103,24 +139,10 @@ class SMMOrderService
                 'sent_to_provider_at' => now(),
             ]);
 
-            SMMOrderLog::create([
-                'order_id'         => $order->id,
-                'action'           => 'place_order',
-                'request_payload'  => $requestPayload,
-                'response_payload' => $result,
-                'success'          => true,
-                'http_status'      => '200',
-            ]);
+            $this->writeLog($order, 'place_order', $requestPayload, $result, true, '200');
         } catch (\Throwable $e) {
-            SMMOrderLog::create([
-                'order_id'         => $order->id,
-                'action'           => 'place_order',
-                'request_payload'  => $requestPayload,
-                'response_payload' => ['error' => $e->getMessage()],
-                'success'          => false,
-                'http_status'      => '500',
-            ]);
-            // Re-throw so the job can retry; failed() handles final cleanup
+            $this->writeLog($order, 'place_order', $requestPayload, ['error' => $e->getMessage()], false, '500');
+            $this->markFailed($order, 'Provider API error: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -153,14 +175,7 @@ class SMMOrderService
         try {
             $result = $driver->checkStatus($order->provider_order_id);
 
-            SMMOrderLog::create([
-                'order_id'         => $order->id,
-                'action'           => 'check_status',
-                'request_payload'  => ['order' => $order->provider_order_id],
-                'response_payload' => $result,
-                'success'          => true,
-                'http_status'      => '200',
-            ]);
+            $this->writeLog($order, 'check_status', ['order' => $order->provider_order_id], $result, true, '200');
 
             $providerStatus = strtolower($result['status'] ?? '');
 
@@ -186,7 +201,6 @@ class SMMOrderService
                 }
                 $order->update($updates);
             } else {
-                // Still in progress — update counters
                 $order->update([
                     'start_count' => $result['start_count'] ?? $order->start_count,
                     'remains'     => $result['remains'] ?? $order->remains,
@@ -198,7 +212,7 @@ class SMMOrderService
     }
 
     /**
-     * Refund a failed/pending order back to user wallet.
+     * Refund a failed/pending order back to user wallet (admin-initiated).
      */
     public function refundOrder(SMMOrder $order, ?int $adminId = null): void
     {
@@ -236,8 +250,7 @@ class SMMOrderService
     }
 
     /**
-     * Auto-refund after job exhausts all retries.
-     * Does NOT check canBeRefunded() — order may still be PENDING at this point.
+     * Auto-refund after a failed provider call.
      */
     public function autoRefund(SMMOrder $order): void
     {
@@ -267,7 +280,8 @@ class SMMOrderService
     }
 
     /**
-     * Reset a failed order to PENDING and re-dispatch to provider (admin action).
+     * Reset a FAILED order to PENDING and immediately retry sending to provider.
+     * Called from admin order detail page.
      */
     public function retryOrder(SMMOrder $order): void
     {
@@ -276,13 +290,15 @@ class SMMOrderService
         }
 
         $order->update([
-            'status'             => SMMOrderStatus::PENDING->value,
-            'remarks'            => null,
-            'provider_order_id'  => null,
-            'sent_to_provider_at'=> null,
+            'status'              => SMMOrderStatus::PENDING->value,
+            'remarks'             => null,
+            'provider_order_id'   => null,
+            'sent_to_provider_at' => null,
         ]);
 
-        dispatch(new \App\Jobs\ProcessSMMOrder($order->id));
+        // Send immediately — no queue
+        $order->load('service.provider');
+        $this->sendToProvider($order);
     }
 
     public function markFailed(SMMOrder $order, string $reason): void
@@ -291,5 +307,23 @@ class SMMOrderService
             'status'  => SMMOrderStatus::FAILED->value,
             'remarks' => $reason,
         ]);
+    }
+
+    // ── Private Helpers ───────────────────────────────────────────────────────
+
+    private function writeLog(SMMOrder $order, string $action, array $request, array $response, bool $success, string $httpStatus): void
+    {
+        try {
+            SMMOrderLog::create([
+                'order_id'         => $order->id,
+                'action'           => $action,
+                'request_payload'  => $request,
+                'response_payload' => $response,
+                'success'          => $success,
+                'http_status'      => $httpStatus,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('[SMM] Failed to write order log', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+        }
     }
 }

@@ -462,11 +462,29 @@ class SMMBoostController extends Controller
     public function retryOrder(int $id): RedirectResponse
     {
         $order = SMMOrder::with('service.provider')->findOrFail($id);
+
+        // Allow retry for both FAILED orders and stuck PENDING orders (no logs)
+        $isStuck = $order->status === SMMOrderStatus::PENDING->value
+                && $order->logs()->count() === 0;
+
+        if ($order->status !== SMMOrderStatus::FAILED->value && !$isStuck) {
+            return back()->with(response_status('Only failed or stuck orders can be retried.', 'error'));
+        }
+
+        // Reset to pending and send immediately
+        $order->update([
+            'status'              => SMMOrderStatus::PENDING->value,
+            'remarks'             => null,
+            'provider_order_id'   => null,
+            'sent_to_provider_at' => null,
+        ]);
+
         try {
-            $this->orderService->retryOrder($order);
-            return back()->with(response_status('Order resubmitted to provider.'));
-        } catch (\RuntimeException $e) {
-            return back()->with(response_status($e->getMessage(), 'error'));
+            $order->load('service.provider');
+            $this->orderService->sendToProvider($order);
+            return back()->with(response_status('Order sent to provider successfully.'));
+        } catch (\Throwable $e) {
+            return back()->with(response_status('Provider error: ' . $e->getMessage(), 'error'));
         }
     }
 
