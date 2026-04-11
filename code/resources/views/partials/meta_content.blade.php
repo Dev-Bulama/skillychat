@@ -1,3 +1,4 @@
+@php $meta_data = $meta_data ?? []; @endphp
 <meta name="description" content='{{Arr::get($meta_data,"meta_description","")}}' />
 <meta name='keywords' content='{{implode(",",Arr::get($meta_data,"meta_keywords",""))}}'>
 <link  nonce="{{ csp_nonce() }}" rel="shortcut icon" href="{{Arr::get($meta_data,'og_image','')}}" type="image/x-icon">
