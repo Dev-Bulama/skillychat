@@ -589,6 +589,12 @@ use Illuminate\Support\Facades\Http;
         ->prefix('webhook/whatsapp')
         ->withoutMiddleware(['auth', 'web', 'sanitizer'])
         ->group(function () {
+            # Platform-level webhook: admin configures this ONE URL in Meta.
+            # Routes messages to users by matching phone_number_id in payload.
+            Route::get('/platform',  'verifyPlatform')->name('whatsapp.webhook.platform.verify');
+            Route::post('/platform', 'receivePlatform')->name('whatsapp.webhook.platform.receive');
+
+            # Per-user webhook (legacy / advanced mode)
             Route::get('/{verifyToken}',  'verify')->name('whatsapp.webhook.verify');
             Route::post('/{verifyToken}', 'receive')->name('whatsapp.webhook.receive');
         });
