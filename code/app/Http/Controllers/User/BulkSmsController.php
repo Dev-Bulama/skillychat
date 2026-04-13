@@ -139,8 +139,8 @@ class BulkSmsController extends Controller
             ->where('user_id', $this->user->id)
             ->firstOrFail();
 
-        if (!$campaign->isDraft()) {
-            return back()->with(response_status('Only draft campaigns can be deleted.', 'error'));
+        if ($campaign->status === 'processing') {
+            return back()->with(response_status('Cannot delete a campaign that is currently sending.', 'error'));
         }
 
         $campaign->delete();

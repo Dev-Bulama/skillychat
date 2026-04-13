@@ -388,6 +388,7 @@ HTML;
             'whatsapp_default_phone_number_id'  => 'nullable|string|max:255',
             'whatsapp_default_welcome_message'  => 'nullable|string',
             'whatsapp_default_fallback_message' => 'nullable|string',
+            'whatsapp_platform_verify_token'    => 'nullable|string|max:255',
         ]);
 
         $keys = [
@@ -397,6 +398,7 @@ HTML;
             'whatsapp_default_phone_number_id',
             'whatsapp_default_welcome_message',
             'whatsapp_default_fallback_message',
+            'whatsapp_platform_verify_token',
         ];
 
         foreach ($keys as $key) {

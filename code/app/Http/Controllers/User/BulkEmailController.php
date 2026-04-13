@@ -132,8 +132,11 @@ class BulkEmailController extends Controller
     {
         $campaign = EmailCampaign::where('uid', $uid)
             ->where('user_id', $this->user->id)
-            ->where('status', 'draft')
             ->firstOrFail();
+
+        if ($campaign->status === 'processing') {
+            return back()->with(response_status('Cannot delete a campaign that is currently sending.', 'error'));
+        }
 
         $campaign->delete();
 

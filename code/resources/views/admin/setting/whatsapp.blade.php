@@ -23,7 +23,7 @@
                     </ul>
                 </div>
 
-                <form action="{{route('admin.setting.whatsapp.save')}}" method="post">
+                <form action="{{route('admin.setting.whatsapp.save')}}" method="post" id="whatsapp-settings-form">
                     @csrf
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -71,11 +71,36 @@
 
                 <hr class="my-4">
 
+                {{-- Platform Webhook Section --}}
+                <div class="p-3 rounded-3 mb-3" style="background:#f0fdf4;border:1px solid #86efac;">
+                    <h6 class="fw-semibold mb-2 text-success"><i class="bi bi-broadcast me-1"></i>{{translate('Platform Webhook (Recommended)')}}</h6>
+                    <p class="fs-13 text-muted mb-2">{{translate('Configure ONE webhook URL in Meta for the entire platform. All user messages are automatically routed by phone number ID — no per-user webhook setup required.')}}</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold fs-13">{{translate('Platform Webhook URL')}}</label>
+                        <div class="input-group">
+                            <code class="form-control fs-12 bg-white font-monospace" id="platformWebhookUrl">{{ url('/webhook/whatsapp/platform') }}</code>
+                            <button class="btn btn-outline-secondary btn-sm" type="button" onclick="navigator.clipboard.writeText('{{ url('/webhook/whatsapp/platform') }}').then(()=>this.textContent='Copied!').catch(()=>{})">Copy</button>
+                        </div>
+                        <small class="text-muted fs-12">{{translate('Enter this URL in Meta → WhatsApp → Configuration → Webhook → Callback URL')}}</small>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold fs-13">{{translate('Platform Verify Token')}}</label>
+                        <div class="input-group mb-1">
+                            <input type="text" name="whatsapp_platform_verify_token" class="form-control font-monospace"
+                                value="{{site_settings('whatsapp_platform_verify_token')}}" placeholder="e.g. my_platform_secret_token_2024"
+                                form="whatsapp-settings-form">
+                            <button class="btn btn-outline-secondary btn-sm" type="button"
+                                onclick="var t=Math.random().toString(36).substring(2)+Math.random().toString(36).substring(2);this.closest('.input-group').querySelector('input').value=t;">Generate</button>
+                        </div>
+                        <small class="text-muted fs-12">{{translate('Enter this same token in Meta → Webhook → Verify Token field when you click Edit')}}</small>
+                    </div>
+                </div>
+
                 <div class="p-3 rounded-3" style="background:#f8f9fa;border:1px solid #e5e7eb;">
-                    <h6 class="fw-semibold mb-2"><i class="bi bi-link-45deg me-1"></i>{{translate('Webhook URL Format')}}</h6>
-                    <p class="fs-13 text-muted mb-1">{{translate('Each user account has a unique webhook URL shown after they connect. The format is:')}}</p>
+                    <h6 class="fw-semibold mb-2"><i class="bi bi-link-45deg me-1"></i>{{translate('Per-User Webhook URL Format (Legacy)')}}</h6>
+                    <p class="fs-13 text-muted mb-1">{{translate('Each user account also has a unique webhook URL for advanced/custom setups:')}}</p>
                     <code class="fs-12 d-block p-2 bg-white rounded border">{{ url('/webhook/whatsapp/{user_verify_token}') }}</code>
-                    <p class="fs-12 text-muted mt-2 mb-0">{{translate('Point this in Meta → WhatsApp → Configuration → Webhook → Callback URL. Each user sees their own URL on their account detail page.')}}</p>
+                    <p class="fs-12 text-muted mt-2 mb-0">{{translate('Each user sees their own URL on their account detail page. Use the Platform Webhook above instead for simpler setup.')}}</p>
                 </div>
             </div>
         </div>
@@ -157,7 +182,8 @@
                         <h6 class="fw-bold mb-2">{{translate('Save Settings on This Page')}}</h6>
                         <ol class="fs-13 text-muted ps-3 mb-0">
                             <li class="mb-2">Fill in all four fields above: <strong>App ID, WABA ID, Phone Number ID, Access Token</strong>.</li>
-                            <li class="mb-2">Optionally set a <strong>Default Welcome Message</strong> (sent to every new contact) and <strong>Default Fallback Message</strong> (sent when AI/bot doesn't understand).</li>
+                            <li class="mb-2">Scroll down to the <strong>Platform Webhook</strong> section and generate or enter a <strong>Platform Verify Token</strong>.</li>
+                            <li class="mb-2">Optionally set a <strong>Default Welcome Message</strong> and <strong>Default Fallback Message</strong>.</li>
                             <li>Click the <strong>Save WhatsApp Settings</strong> button.</li>
                         </ol>
                         <div class="alert mt-3 fs-13" style="background:#f0fdf4;border-left:3px solid #22c55e;padding:10px 14px;border-radius:6px;">
@@ -172,18 +198,22 @@
                     <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center fw-bold text-white fs-16"
                         style="width:42px;height:42px;min-width:42px;background:#6366f1;">5</div>
                     <div class="w-100">
-                        <h6 class="fw-bold mb-2">{{translate('Configure the Webhook in Meta')}}</h6>
+                        <h6 class="fw-bold mb-2">{{translate('Configure the Platform Webhook in Meta (One-Time Setup)')}}</h6>
+                        <div class="alert fs-13 mb-3" style="background:#f0fdf4;border-left:3px solid #22c55e;padding:10px 14px;border-radius:6px;">
+                            <i class="bi bi-check-circle me-1 text-success"></i>
+                            <strong>Platform Webhook:</strong> {{translate('You configure this ONCE. All users\' messages are automatically routed by the platform — users do NOT need to configure webhooks themselves.')}}
+                        </div>
                         <ol class="fs-13 text-muted ps-3 mb-0">
                             <li class="mb-2">In your Meta App, go to <strong>WhatsApp → Configuration</strong> (left sidebar).</li>
                             <li class="mb-2">Under the <em>Webhook</em> section, click <strong>Edit</strong>.</li>
-                            <li class="mb-2">In the <strong>Callback URL</strong> field, paste the webhook URL for one of your test users. The URL format is:<br>
-                                <code class="d-block mt-1 p-2 bg-light rounded border fs-12">{{ url('/webhook/whatsapp/') }}{verify_token}</code>
-                                <span class="text-muted fs-12 d-block mt-1">Each user's Verify Token is shown on their WhatsApp account detail page after they connect.</span>
+                            <li class="mb-2">In the <strong>Callback URL</strong> field, paste your platform webhook URL:<br>
+                                <code class="d-block mt-1 p-2 bg-light rounded border fs-12">{{ url('/webhook/whatsapp/platform') }}</code>
+                                <span class="text-muted fs-12 d-block mt-1">This URL is also shown in the <strong>Platform Webhook</strong> section on this page with a Copy button.</span>
                             </li>
-                            <li class="mb-2">In the <strong>Verify Token</strong> field, enter that same user's Verify Token.</li>
-                            <li class="mb-2">Click <strong>Verify and Save</strong> — Meta will make a GET request to confirm the URL is reachable.</li>
+                            <li class="mb-2">In the <strong>Verify Token</strong> field, enter the <strong>Platform Verify Token</strong> you set above (or generate one and save first).</li>
+                            <li class="mb-2">Click <strong>Verify and Save</strong> — Meta will make a GET request to your platform URL to confirm it's reachable.</li>
                             <li class="mb-2">After saving, click <strong>Manage</strong> (next to <em>Webhook Fields</em>) → enable the <strong>messages</strong> checkbox → click <strong>Done</strong>.</li>
-                            <li>Repeat this for each user's phone number as they connect, or use a single shared webhook if you route by token.</li>
+                            <li>That's it! The platform now receives all messages and routes them to the correct user account automatically.</li>
                         </ol>
                     </div>
                 </div>
@@ -193,14 +223,17 @@
                     <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center fw-bold text-white fs-16"
                         style="width:42px;height:42px;min-width:42px;background:#25d366;">6</div>
                     <div class="w-100">
-                        <h6 class="fw-bold mb-2">{{translate('Users Connect Their Phone Number')}}</h6>
+                        <h6 class="fw-bold mb-2">{{translate('Users Connect Their Phone Number (That\'s All They Do!)')}}</h6>
                         <ol class="fs-13 text-muted ps-3 mb-0">
                             <li class="mb-2">Tell your users to go to <strong>WhatsApp → Connect Account</strong> in their dashboard.</li>
-                            <li class="mb-2">They enter an <strong>Account Label</strong> and their <strong>WhatsApp Business Phone Number</strong> in international format (e.g. +2348012345678).</li>
-                            <li class="mb-2">They click <strong>Connect WhatsApp</strong>.</li>
-                            <li class="mb-2">Their account detail page shows their unique <strong>Webhook URL</strong> and <strong>Verify Token</strong> → they paste these into Meta's Webhook configuration for their phone number.</li>
-                            <li>Messages sent to their number will now be received by the platform and handled by their AI chatbot or live agent.</li>
+                            <li class="mb-2">They enter an <strong>Account Label</strong> and their <strong>WhatsApp Business Phone Number</strong> in international format (e.g. +2348012345678), plus the <strong>Phone Number ID</strong> from Meta → Getting Started.</li>
+                            <li class="mb-2">They click <strong>Connect WhatsApp</strong> and test the connection.</li>
+                            <li>Messages sent to their number will immediately be received and handled by their AI chatbot or live agent — <strong>no webhook setup required on their end</strong>.</li>
                         </ol>
+                        <div class="alert mt-3 fs-13" style="background:#fff8e1;border-left:3px solid #ffc107;padding:10px 14px;border-radius:6px;">
+                            <i class="bi bi-exclamation-triangle me-1 text-warning"></i>
+                            <strong>Note:</strong> Each user's phone number must already be registered inside your Meta WABA (WhatsApp Business Account). Numbers not in your WABA will not receive messages.
+                        </div>
                     </div>
                 </div>
 

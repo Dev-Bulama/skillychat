@@ -77,6 +77,13 @@
                                 <button class="i-btn btn--sm btn--outline test-btn" data-uid="{{ $account->uid }}">
                                     <i class="bi bi-wifi me-1"></i>{{ translate('Test') }}
                                 </button>
+                                <form action="{{ route('user.whatsapp.destroy', $account->uid) }}" method="post"
+                                    onsubmit="return confirm('{{ translate('Delete this WhatsApp account? All messages will also be removed.') }}')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="i-btn btn--sm btn--danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     </div>
