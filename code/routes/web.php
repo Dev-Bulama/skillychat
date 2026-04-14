@@ -509,13 +509,13 @@ use Illuminate\Support\Facades\Http;
              Route::get('/',                              'index')->name('index');
              Route::get('/create',                        'create')->name('create');
              Route::post('/store',                        'store')->name('store');
-             Route::get('/{uid}',                         'show')->name('show');
-             Route::patch('/{uid}/status',                'updateStatus')->name('status');
-             Route::delete('/{uid}/destroy',              'destroy')->name('destroy');
              Route::get('/services',                      'services')->name('services');
              Route::post('/services/store',               'storeService')->name('service.store');
              Route::delete('/services/{id}/destroy',      'destroyService')->name('service.destroy');
              Route::patch('/services/{id}/toggle',        'toggleService')->name('service.toggle');
+             Route::get('/{uid}',                         'show')->name('show');
+             Route::patch('/{uid}/status',                'updateStatus')->name('status');
+             Route::delete('/{uid}/destroy',              'destroy')->name('destroy');
          });
 
          #live agent routes
