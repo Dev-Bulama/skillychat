@@ -374,6 +374,11 @@ Route::middleware([
 
         });
 
+        # ── Google Business Profile (Admin) ──────────────────────────────────
+        Route::get('/setting/google-business',       [\App\Http\Controllers\Admin\GoogleBusinessAdminController::class, 'settings'])->name('setting.google.business');
+        Route::post('/setting/google-business/save', [\App\Http\Controllers\Admin\GoogleBusinessAdminController::class, 'saveSettings'])->name('setting.google.business.save');
+        Route::get('/google-business/users',         [\App\Http\Controllers\Admin\GoogleBusinessAdminController::class, 'users'])->name('google.business.users');
+
         #Category section refactored
         Route::controller(CategoryController::class)->prefix("category")->name('category.')->group(function () {
 

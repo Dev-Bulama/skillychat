@@ -70,21 +70,55 @@
                 <h4 class="card-title"><span class="badge bg-success me-2">Part 2</span>{{ translate('Connect Your WhatsApp Account') }}</h4>
             </div>
             <div class="card-body">
+
+                @php $adminConfigured = !empty(site_settings('whatsapp_default_access_token')); @endphp
+
+                @if($adminConfigured)
+                {{-- Platform webhook mode --}}
+                <div class="alert mb-4" style="background:#f0fdf4;border-left:4px solid #25d366;padding:14px 16px;border-radius:8px;">
+                    <p class="fw-semibold mb-1 fs-14"><i class="bi bi-check-circle me-1" style="color:#16a34a;"></i>{{ translate('Simplified Mode — No Webhook Setup Needed!') }}</p>
+                    <p class="fs-13 text-muted mb-0">{{ translate('The platform is connected to WhatsApp Cloud API. You only need to provide your Phone Number and Phone Number ID. All routing is handled automatically.') }}</p>
+                </div>
+
+                <ol class="fs-14" style="line-height:2.1;">
+                    <li>In the sidebar, click <strong>WhatsApp → Add Account</strong>.</li>
+                    <li>Enter an <strong>Account Label</strong> (any name you choose, e.g. "Customer Support").</li>
+                    <li>Enter your <strong>WhatsApp Business Phone Number</strong> in international format (e.g. <code>+2348012345678</code>).</li>
+                    <li>
+                        Enter your <strong>Phone Number ID</strong>. Here is how to find it:
+                        <ul class="mt-1 mb-2">
+                            <li>Go to <strong>developers.facebook.com → Your App → WhatsApp → Getting Started</strong>.</li>
+                            <li>Under <em>Step 2: Send messages with the API</em>, select your phone number from the dropdown.</li>
+                            <li>Below the dropdown you will see <strong>"Phone number ID"</strong> — it is a long numeric string like <code>111222333444555</code>.</li>
+                            <li>Copy that number and paste it into the <strong>Phone Number ID</strong> field on the Connect form.</li>
+                        </ul>
+                        <div class="p-2 rounded-3 fs-13" style="background:#fef3c7;border-left:3px solid #f59e0b;">
+                            <strong>Important:</strong> The Phone Number ID is NOT the same as the App ID or WABA ID. It is specific to your individual phone number.
+                        </div>
+                    </li>
+                    <li>Optionally set a <strong>Welcome Message</strong> (sent to new contacts) and <strong>Fallback Message</strong> (sent when no AI reply is generated).</li>
+                    <li>Optionally enable <strong>AI Auto-Reply</strong> and select a chatbot to respond automatically.</li>
+                    <li>Click <strong>Connect WhatsApp</strong>.</li>
+                    <li>Click the <strong>Test</strong> button on your account card to verify the connection.</li>
+                    <li>Messages sent to your WhatsApp number will now appear in your Inbox instantly. No webhook configuration needed!</li>
+                </ol>
+                @else
+                {{-- Manual mode --}}
                 <ol class="fs-14" style="line-height:2;">
                     <li>In the sidebar click <strong>WhatsApp → Add Account</strong>.</li>
-                    <li>Fill in: <strong>Account Name</strong> (any label), <strong>Phone Number</strong>, <strong>Phone Number ID</strong>, <strong>WABA ID</strong>, <strong>Access Token</strong>.</li>
-                    <li>Leave <strong>Verify Token</strong> blank — the system auto-generates one. You can change it if you prefer a custom string.</li>
-                    <li>Click <strong>Save Account</strong>. The page will show your unique <strong>Webhook URL</strong>.</li>
-                    <li>Copy the Webhook URL, go back to Meta Developer Console → WhatsApp → Configuration → Webhook.</li>
-                    <li>Click <strong>Edit</strong> and paste the Webhook URL into "Callback URL".</li>
-                    <li>Paste your <strong>Verify Token</strong> (same string shown on this platform) into "Verify token".</li>
-                    <li>Click <strong>Verify and Save</strong>. Meta will call your webhook to verify — it should pass instantly.</li>
-                    <li>Under <strong>Webhook fields</strong>, subscribe to: <code>messages</code>.</li>
-                    <li>Back in SkillyChatWA, click <strong>Test Connection</strong> button on the account card to confirm everything is working.</li>
+                    <li>Fill in: <strong>Account Name</strong>, <strong>Phone Number</strong>, <strong>Phone Number ID</strong>, <strong>WABA ID</strong>, <strong>Access Token</strong>.</li>
+                    <li>Leave <strong>Verify Token</strong> blank — the system auto-generates one.</li>
+                    <li>Click <strong>Connect Account</strong>. The page will show your unique <strong>Webhook URL</strong>.</li>
+                    <li>Go to Meta Developer Console → WhatsApp → Configuration → Webhook → <strong>Edit</strong>.</li>
+                    <li>Paste your <strong>Webhook URL</strong> into "Callback URL" and your <strong>Verify Token</strong> into "Verify token".</li>
+                    <li>Click <strong>Verify and Save</strong>.</li>
+                    <li>Under <strong>Webhook fields</strong>, enable: <code>messages</code>.</li>
+                    <li>Click <strong>Test</strong> on your account card to confirm everything is working.</li>
                 </ol>
+                @endif
 
                 <div class="alert mt-3" style="background:#fefce8;border-left:4px solid #fbbf24;padding:12px 16px;border-radius:8px;">
-                    <strong>Tip:</strong> For production, add your real phone number and make sure it is approved for WhatsApp Business API by Meta. Test numbers only allow messages to verified recipients.
+                    <strong>Note:</strong> Your phone number must be registered in the Meta WABA (WhatsApp Business Account). Test numbers provided by Meta only work with verified recipient numbers during development.
                 </div>
             </div>
         </div>
