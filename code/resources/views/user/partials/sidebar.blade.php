@@ -327,24 +327,6 @@
                     </li>
                     @endif
 
-                    @if(\App\Models\FeatureFlag::enabled('google_business_profile'))
-                    <li class="sidemenu-item">
-                        <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse @if(request()->routeIs('user.google-business.*')) active @endif">
-                            <div class="sidemenu-icon"><i class="bi bi-building" style="color:#4285f4;"></i></div>
-                            <span>{{ translate('Google Business') }} <small><i class="bi bi-chevron-down"></i></small></span>
-                        </a>
-                        <div class="side-menu-dropdown @if(request()->routeIs('user.google-business.*')) show-sideMenu @endif">
-                            <ul class="sub-menu">
-                                <li class="sub-menu-item">
-                                    <a class="sidebar-menu-link {{ request()->routeIs('user.google-business.index') ? 'active' : '' }}" href="{{ route('user.google-business.index') }}">
-                                        <span><i class="bi bi-geo-alt"></i></span><p>{{ translate('My Locations') }}</p>
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </li>
-                    @endif
-
                     @if($whatsappEnabled)
                     <li class="sidemenu-item">
                         <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse @if(request()->routeIs('user.whatsapp.*')) active @endif">
