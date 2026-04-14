@@ -97,6 +97,9 @@
                                     <i class="bi bi-arrow-clockwise me-1"></i>{{ translate('Sync Locations') }}
                                 </button>
                             </form>
+                            <a href="{{ route('user.google-business.diagnose') }}" target="_blank" class="i-btn btn--sm btn--outline" title="{{ translate('Show raw API responses for debugging') }}">
+                                <i class="bi bi-bug me-1"></i>{{ translate('Diagnose API') }}
+                            </a>
                             <form method="post" action="{{ route('user.google-business.disconnect') }}"
                                   class="d-inline"
                                   onsubmit="return confirm('{{ translate('Disconnect your Google account? This will remove all synced location data.') }}')">

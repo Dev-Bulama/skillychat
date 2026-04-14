@@ -422,6 +422,7 @@ use Illuminate\Support\Facades\Http;
                  Route::get('/',                                              'index')->name('index');
                  Route::get('/connect',                                       'redirect')->name('connect');
                  Route::get('/callback',                                      'callback')->name('callback');
+                 Route::get('/diagnose',                                      'diagnose')->name('diagnose');
                  Route::post('/disconnect',                                   'disconnect')->name('disconnect');
                  Route::post('/sync-locations',                               'syncLocations')->name('sync-locations');
                  Route::get('/location/{id}',                                 'showLocation')->name('location');

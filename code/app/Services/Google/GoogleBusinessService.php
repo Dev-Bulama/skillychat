@@ -188,9 +188,9 @@ class GoogleBusinessService
             $token    = $this->getAccessToken($account);
             $readMask = 'name,title,storefrontAddress,phoneNumbers,websiteUri,regularHours,profile,categories,metadata';
 
-            // Build URL manually so commas in readMask are NOT percent-encoded
-            // (some Google API versions reject %2C in FieldMask params)
-            $url      = self::LOCATIONS_BASE . "/{$accountName}/locations?readMask=" . rawurlencode($readMask);
+            // Append readMask with literal commas — Google's FieldMask parser
+            // rejects %2C-encoded commas that http_build_query / rawurlencode produce.
+            $url      = self::LOCATIONS_BASE . "/{$accountName}/locations?readMask={$readMask}";
             $response = Http::withToken($token)->get($url);
 
             if ($response->failed()) {
