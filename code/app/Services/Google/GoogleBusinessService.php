@@ -21,7 +21,7 @@ class GoogleBusinessService
     private const REVIEWS_BASE    = 'https://mybusiness.googleapis.com/v4';
     private const POSTS_BASE      = 'https://mybusiness.googleapis.com/v4';
     private const INSIGHTS_BASE   = 'https://mybusiness.googleapis.com/v4';
-    private const SCOPES          = 'https://www.googleapis.com/auth/business.manage';
+    private const SCOPES          = 'openid email profile https://www.googleapis.com/auth/business.manage';
 
     public function __construct()
     {
@@ -166,11 +166,18 @@ class GoogleBusinessService
             $response = Http::withToken($token)->get(self::ACCOUNTS_LIST);
 
             if ($response->failed()) {
-                return ['success' => false, 'data' => [], 'error' => 'Accounts list failed (' . $response->status() . '): ' . $response->body()];
+                Log::error('GoogleBusiness getAccounts failed', [
+                    'status' => $response->status(),
+                    'body'   => $response->body(),
+                ]);
+                return ['success' => false, 'data' => [], 'error' => 'Google accounts fetch failed (' . $response->status() . '): ' . $response->body()];
             }
 
-            return ['success' => true, 'data' => $response->json('accounts', []), 'error' => ''];
+            $accounts = $response->json('accounts', []);
+
+            return ['success' => true, 'data' => $accounts, 'error' => ''];
         } catch (\Throwable $e) {
+            Log::error('GoogleBusiness getAccounts exception: ' . $e->getMessage());
             return ['success' => false, 'data' => [], 'error' => $e->getMessage()];
         }
     }
@@ -178,18 +185,28 @@ class GoogleBusinessService
     public function getLocations(GoogleAccount $account, string $accountName): array
     {
         try {
-            $token = $this->getAccessToken($account);
-            $readMask = 'name,title,storefrontAddress,phoneNumbers,websiteUri,regularHours,profile,categories';
+            $token    = $this->getAccessToken($account);
+            $readMask = 'name,title,storefrontAddress,phoneNumbers,websiteUri,regularHours,profile,categories,metadata';
 
-            $response = Http::withToken($token)
-                ->get(self::LOCATIONS_BASE . "/{$accountName}/locations", ['readMask' => $readMask]);
+            // Build URL manually so commas in readMask are NOT percent-encoded
+            // (some Google API versions reject %2C in FieldMask params)
+            $url      = self::LOCATIONS_BASE . "/{$accountName}/locations?readMask=" . rawurlencode($readMask);
+            $response = Http::withToken($token)->get($url);
 
             if ($response->failed()) {
+                Log::error('GoogleBusiness getLocations failed', [
+                    'status' => $response->status(),
+                    'body'   => $response->body(),
+                    'account' => $accountName,
+                ]);
                 return ['success' => false, 'data' => [], 'error' => 'Locations list failed (' . $response->status() . '): ' . $response->body()];
             }
 
-            return ['success' => true, 'data' => $response->json('locations', []), 'error' => ''];
+            $locations = $response->json('locations', []);
+
+            return ['success' => true, 'data' => $locations, 'error' => '', 'empty' => empty($locations)];
         } catch (\Throwable $e) {
+            Log::error('GoogleBusiness getLocations exception: ' . $e->getMessage());
             return ['success' => false, 'data' => [], 'error' => $e->getMessage()];
         }
     }

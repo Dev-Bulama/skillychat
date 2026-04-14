@@ -114,27 +114,34 @@ class GoogleBusinessController extends Controller
         }
 
         // Fetch GMB accounts and locations
-        $accountsResult = $this->service->getAccounts($googleAccount);
+        $accountsResult  = $this->service->getAccounts($googleAccount);
+        $locationsSynced = 0;
 
         if ($accountsResult['success'] && ! empty($accountsResult['data'])) {
-            $firstAccount = $accountsResult['data'][0];
-            $accountName  = $firstAccount['name'] ?? null;
+            foreach ($accountsResult['data'] as $gmbAccount) {
+                $accountName = $gmbAccount['name'] ?? null;
+                if (! $accountName) continue;
 
-            if ($accountName) {
                 $locationsResult = $this->service->getLocations($googleAccount, $accountName);
 
                 if ($locationsResult['success']) {
                     foreach ($locationsResult['data'] as $loc) {
                         $this->upsertLocation($googleAccount, $accountName, $loc);
+                        $locationsSynced++;
                     }
                 }
             }
         }
 
-        GoogleSyncLog::record($this->user->id, 'oauth_connect', 'success', null, 200, 'Connected Google account');
+        $note = "Connected Google account ({$googleEmail}). Synced {$locationsSynced} location(s).";
+        GoogleSyncLog::record($this->user->id, 'oauth_connect', 'success', null, 200, $note);
+
+        $msg = $locationsSynced > 0
+            ? "Google Business Profile connected. {$locationsSynced} location(s) synced."
+            : 'Google account connected. No locations found yet — use "Sync Locations" to retry.';
 
         return redirect()->route('user.google-business.index')
-            ->with(response_status('Google Business Profile connected successfully.'));
+            ->with(response_status($msg));
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -178,21 +185,44 @@ class GoogleBusinessController extends Controller
         $accountsResult = $this->service->getAccounts($account);
 
         if (! $accountsResult['success']) {
-            return back()->with(response_status($accountsResult['error'], 'error'));
+            GoogleSyncLog::record($this->user->id, 'sync_locations', 'error', null, null, $accountsResult['error']);
+            return back()->with(response_status('Could not fetch Google accounts: ' . $accountsResult['error'], 'error'));
+        }
+
+        if (empty($accountsResult['data'])) {
+            GoogleSyncLog::record($this->user->id, 'sync_locations', 'error', null, null, 'No GMB accounts returned for this Google account');
+            return back()->with(response_status('No Google Business accounts found for the connected Google account. Make sure the account has access to Google Business Profile.', 'error'));
         }
 
         $synced = 0;
+        $errors = [];
+
         foreach ($accountsResult['data'] as $gmbAccount) {
-            $accountName     = $gmbAccount['name'] ?? null;
+            $accountName = $gmbAccount['name'] ?? null;
             if (! $accountName) continue;
 
             $locationsResult = $this->service->getLocations($account, $accountName);
-            if ($locationsResult['success']) {
-                foreach ($locationsResult['data'] as $loc) {
-                    $this->upsertLocation($account, $accountName, $loc);
-                    $synced++;
-                }
+
+            if (! $locationsResult['success']) {
+                $errors[] = $locationsResult['error'];
+                continue;
             }
+
+            if (empty($locationsResult['data'])) {
+                $errors[] = "Account {$accountName} returned no locations.";
+                continue;
+            }
+
+            foreach ($locationsResult['data'] as $loc) {
+                $this->upsertLocation($account, $accountName, $loc);
+                $synced++;
+            }
+        }
+
+        if ($synced === 0) {
+            $note = empty($errors) ? 'No locations found on any account' : implode(' | ', $errors);
+            GoogleSyncLog::record($this->user->id, 'sync_locations', 'error', null, null, $note);
+            return back()->with(response_status('No locations were found. Details: ' . $note, 'error'));
         }
 
         GoogleSyncLog::record($this->user->id, 'sync_locations', 'success', null, 200, "Synced {$synced} locations");
