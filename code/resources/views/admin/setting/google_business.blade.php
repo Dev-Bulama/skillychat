@@ -123,17 +123,30 @@
                         </h2>
                         <div id="step2" class="accordion-collapse collapse" data-bs-parent="#setupGuide">
                             <div class="accordion-body fs-14 text-muted">
-                                <p>{{ translate('In your project, navigate to') }} <strong>APIs & Services → Library</strong>. {{ translate('Search for and enable each of these:') }}</p>
-                                <ul class="ps-3">
-                                    <li><strong>My Business Account Management API</strong></li>
-                                    <li><strong>Business Profile Performance API</strong></li>
-                                    <li><strong>My Business Business Information API</strong></li>
-                                    <li><strong>My Business Notifications API</strong></li>
-                                </ul>
-                                <p>{{ translate('For each API: click its name → click the blue "Enable" button → wait for activation.') }}</p>
+                                <p>{{ translate('In your project, navigate to') }} <strong>APIs & Services → Library</strong>. {{ translate('Search for and enable EACH of these — all are required:') }}</p>
+                                <table class="table table-sm table-bordered mb-3">
+                                    <thead class="table-light"><tr><th>API Name</th><th>Used for</th></tr></thead>
+                                    <tbody>
+                                        <tr><td><strong>My Business Account Management API</strong></td><td>Listing GMB accounts</td></tr>
+                                        <tr><td><strong>My Business Business Information API</strong></td><td>Listing &amp; editing locations</td></tr>
+                                        <tr><td><strong>My Business Reviews API</strong></td><td>Reading &amp; replying to reviews</td></tr>
+                                        <tr><td><strong>My Business Notifications API</strong></td><td>Webhooks / notifications</td></tr>
+                                        <tr><td><strong>Business Profile Performance API</strong></td><td>Insights &amp; analytics</td></tr>
+                                    </tbody>
+                                </table>
+                                <p class="mb-1"><strong>{{ translate('How to enable each:') }}</strong></p>
+                                <ol class="ps-3 mb-2">
+                                    <li>{{ translate('Type the API name into the search box in the Library') }}</li>
+                                    <li>{{ translate('Click on the result → click the blue "Enable" button') }}</li>
+                                    <li>{{ translate('Wait for the green "API Enabled" confirmation before moving to the next one') }}</li>
+                                </ol>
+                                <div class="alert alert-danger py-2 fs-13 mb-2">
+                                    <i class="bi bi-x-circle me-1"></i>
+                                    <strong>{{ translate('If any of these APIs is missing, locations will NOT sync — the API returns 403 with no error shown to the user.') }}</strong>
+                                </div>
                                 <div class="alert alert-warning py-2 fs-13">
                                     <i class="bi bi-exclamation-triangle me-1"></i>
-                                    {{ translate('Note: These APIs require your application to be approved by Google. During development, use test user accounts added in the OAuth consent screen.') }}
+                                    {{ translate('Google restricts Business Profile API access. During development, add test users in the OAuth consent screen. For production (all users), submit your app for Google verification.') }}
                                 </div>
                             </div>
                         </div>

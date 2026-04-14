@@ -54,6 +54,66 @@ class GoogleBusinessController extends Controller
     }
 
     // ────────────────────────────────────────────────────────────────────────
+    // Diagnose — shows raw API responses to debug sync issues
+    // ────────────────────────────────────────────────────────────────────────
+
+    public function diagnose(): \Illuminate\Http\JsonResponse
+    {
+        $account = GoogleAccount::where('user_id', $this->user->id)->first();
+
+        if (! $account) {
+            return response()->json(['error' => 'No Google account connected for this user.']);
+        }
+
+        $token = $this->service->getAccessToken($account);
+
+        if (empty($token)) {
+            return response()->json(['error' => 'Could not retrieve access token — it may be expired. Please reconnect.']);
+        }
+
+        // ── 1. Token info (what scopes Google actually granted) ──
+        $tokenInfoRes  = \Illuminate\Support\Facades\Http::get('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=' . $token);
+        $tokenInfo     = $tokenInfoRes->json();
+
+        // ── 2. Accounts API ──────────────────────────────────────
+        $accountsRes   = \Illuminate\Support\Facades\Http::withToken($token)
+            ->get('https://mybusinessaccountmanagement.googleapis.com/v1/accounts');
+        $accountsRaw   = $accountsRes->json();
+
+        // ── 3. Locations per account ─────────────────────────────
+        $locationResults = [];
+        foreach ($accountsRaw['accounts'] ?? [] as $acc) {
+            $accName = $acc['name'] ?? null;
+            if (! $accName) continue;
+
+            $locRes = \Illuminate\Support\Facades\Http::withToken($token)
+                ->get("https://mybusinessbusinessinformation.googleapis.com/v1/{$accName}/locations?readMask=name,title,storefrontAddress");
+
+            $locationResults[$accName] = [
+                'http_status' => $locRes->status(),
+                'body'        => $locRes->json(),
+            ];
+        }
+
+        return response()->json([
+            'connected_google_email' => $account->google_email,
+            'token_expiry'           => $account->token_expiry,
+            'token_info' => [
+                'http_status' => $tokenInfoRes->status(),
+                'scopes'      => $tokenInfo['scope'] ?? null,
+                'email'       => $tokenInfo['email'] ?? null,
+                'error'       => $tokenInfo['error_description'] ?? null,
+            ],
+            'accounts_api' => [
+                'http_status'    => $accountsRes->status(),
+                'accounts_count' => count($accountsRaw['accounts'] ?? []),
+                'body'           => $accountsRaw,
+            ],
+            'locations_api' => $locationResults,
+        ], 200, ['Content-Type' => 'application/json'], JSON_PRETTY_PRINT);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
     // OAuth
     // ────────────────────────────────────────────────────────────────────────
 
