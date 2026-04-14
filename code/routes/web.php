@@ -414,6 +414,29 @@ use Illuminate\Support\Facades\Http;
              Route::post('/{keyId}/set-default', 'setDefaultApiKey')->name('set-default');
          });
 
+         # ── Google Business Profile ─────────────────────────────────────────────
+         Route::controller(\App\Http\Controllers\User\GoogleBusinessController::class)
+             ->name('google-business.')
+             ->prefix('google-business/')
+             ->group(function () {
+                 Route::get('/',                                              'index')->name('index');
+                 Route::get('/connect',                                       'redirect')->name('connect');
+                 Route::get('/callback',                                      'callback')->name('callback');
+                 Route::post('/disconnect',                                   'disconnect')->name('disconnect');
+                 Route::post('/sync-locations',                               'syncLocations')->name('sync-locations');
+                 Route::get('/location/{id}',                                 'showLocation')->name('location');
+                 Route::post('/location/{id}',                                'updateLocation')->name('location.update');
+                 Route::get('/location/{id}/reviews',                         'reviews')->name('reviews');
+                 Route::post('/location/{id}/review-reply',                   'replyReview')->name('review.reply');
+                 Route::delete('/location/{id}/review-reply/{reviewName}',    'deleteReviewReply')->name('review.reply.delete');
+                 Route::get('/location/{id}/posts',                           'posts')->name('posts');
+                 Route::post('/location/{id}/posts',                          'createPost')->name('post.create');
+                 Route::delete('/location/{id}/posts/{postId}',               'deletePost')->name('post.delete');
+                 Route::get('/location/{id}/insights',                        'insights')->name('insights');
+                 Route::post('/location/{id}/sync-reviews',                   'syncReviews')->name('sync-reviews');
+                 Route::post('/location/{id}/sync-posts',                     'syncPosts')->name('sync-posts');
+             });
+
          # ── WhatsApp Accounts ─────────────────────────────────────────────────────
          Route::controller(\App\Http\Controllers\User\WhatsAppController::class)->name('whatsapp.')->prefix('whatsapp/')->group(function () {
              Route::get('/',                          'index')->name('index');
@@ -479,6 +502,20 @@ use Illuminate\Support\Facades\Http;
              Route::delete('/{uid}/steps/{stepId}/destroy',    'destroyStep')->name('step.destroy');
              Route::post('/{uid}/steps/reorder',               'reorderSteps')->name('steps.reorder');
              Route::post('/{uid}/enroll',                      'enroll')->name('enroll');
+         });
+
+         # ── Appointments & Booking Bot ───────────────────────────────────────────
+         Route::controller(\App\Http\Controllers\User\AppointmentController::class)->name('appointments.')->prefix('appointments/')->group(function () {
+             Route::get('/',                              'index')->name('index');
+             Route::get('/create',                        'create')->name('create');
+             Route::post('/store',                        'store')->name('store');
+             Route::get('/{uid}',                         'show')->name('show');
+             Route::patch('/{uid}/status',                'updateStatus')->name('status');
+             Route::delete('/{uid}/destroy',              'destroy')->name('destroy');
+             Route::get('/services',                      'services')->name('services');
+             Route::post('/services/store',               'storeService')->name('service.store');
+             Route::delete('/services/{id}/destroy',      'destroyService')->name('service.destroy');
+             Route::patch('/services/{id}/toggle',        'toggleService')->name('service.toggle');
          });
 
          #live agent routes

@@ -37,9 +37,11 @@
                                 value="{{ old('phone_number', $account->phone_number) }}" placeholder="+2348012345678">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">{{ translate('Phone Number ID') }}</label>
-                            <input type="text" name="phone_number_id" class="form-control"
-                                value="{{ old('phone_number_id', $account->phone_number_id) }}" placeholder="From Meta Developer Console">
+                            <label class="form-label fw-semibold">{{ translate('Phone Number ID') }} <span class="text-danger">*</span></label>
+                            <input type="text" name="phone_number_id" class="form-control @error('phone_number_id') is-invalid @enderror"
+                                value="{{ old('phone_number_id', $account->phone_number_id) }}" placeholder="From Meta → WhatsApp → Getting Started">
+                            <small class="text-muted fs-12">{{ translate('The long numeric ID specific to your phone number (NOT the App ID).') }}</small>
+                            @error('phone_number_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">{{ translate('WhatsApp Business Account ID (WABA ID)') }}</label>

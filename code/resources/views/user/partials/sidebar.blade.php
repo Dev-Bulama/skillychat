@@ -11,6 +11,8 @@
     $leadCrmEnabled      = \App\Models\FeatureFlag::enabled('lead_crm');
     $dripEnabled         = \App\Models\FeatureFlag::enabled('drip_sequences');
     $invoiceEnabled      = \App\Models\FeatureFlag::enabled('invoices');
+    $appointmentsEnabled = \App\Models\FeatureFlag::enabled('appointments');
+    $googleBizEnabled    = \App\Models\FeatureFlag::enabled('google_business_profile');
 
     $platforms = get_platform()
     ->whereIn('id', $accessPlatforms )
@@ -325,6 +327,24 @@
                     </li>
                     @endif
 
+                    @if(\App\Models\FeatureFlag::enabled('google_business_profile'))
+                    <li class="sidemenu-item">
+                        <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse @if(request()->routeIs('user.google-business.*')) active @endif">
+                            <div class="sidemenu-icon"><i class="bi bi-building" style="color:#4285f4;"></i></div>
+                            <span>{{ translate('Google Business') }} <small><i class="bi bi-chevron-down"></i></small></span>
+                        </a>
+                        <div class="side-menu-dropdown @if(request()->routeIs('user.google-business.*')) show-sideMenu @endif">
+                            <ul class="sub-menu">
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.google-business.index') ? 'active' : '' }}" href="{{ route('user.google-business.index') }}">
+                                        <span><i class="bi bi-geo-alt"></i></span><p>{{ translate('My Locations') }}</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    @endif
+
                     @if($whatsappEnabled)
                     <li class="sidemenu-item">
                         <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse @if(request()->routeIs('user.whatsapp.*')) active @endif">
@@ -425,6 +445,52 @@
                                 <li class="sub-menu-item">
                                     <a class="sidebar-menu-link {{ request()->routeIs('user.invoice.create') ? 'active' : '' }}" href="{{ route('user.invoice.create') }}">
                                         <span><i class="bi bi-plus-circle"></i></span><p>{{ translate('New Invoice') }}</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    @endif
+
+                    @if($appointmentsEnabled)
+                    <li class="sidemenu-item">
+                        <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse @if(request()->routeIs('user.appointments.*')) active @endif">
+                            <div class="sidemenu-icon"><i class="bi bi-calendar-check" style="color:#0ea5e9;"></i></div>
+                            <span>{{ translate('Appointments') }} <small><i class="bi bi-chevron-down"></i></small></span>
+                        </a>
+                        <div class="side-menu-dropdown @if(request()->routeIs('user.appointments.*')) show-sideMenu @endif">
+                            <ul class="sub-menu">
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.appointments.index') ? 'active' : '' }}" href="{{ route('user.appointments.index') }}">
+                                        <span><i class="bi bi-list-ul"></i></span><p>{{ translate('All Appointments') }}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.appointments.create') ? 'active' : '' }}" href="{{ route('user.appointments.create') }}">
+                                        <span><i class="bi bi-plus-circle"></i></span><p>{{ translate('New Appointment') }}</p>
+                                    </a>
+                                </li>
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.appointments.services') ? 'active' : '' }}" href="{{ route('user.appointments.services') }}">
+                                        <span><i class="bi bi-briefcase"></i></span><p>{{ translate('Services') }}</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    @endif
+
+                    @if($googleBizEnabled)
+                    <li class="sidemenu-item">
+                        <a href="javascript:void(0)" class="sidemenu-link sidemenu-collapse @if(request()->routeIs('user.google-business.*')) active @endif">
+                            <div class="sidemenu-icon"><i class="bi bi-building" style="color:#4285f4;"></i></div>
+                            <span>{{ translate('Google Business') }} <small><i class="bi bi-chevron-down"></i></small></span>
+                        </a>
+                        <div class="side-menu-dropdown @if(request()->routeIs('user.google-business.*')) show-sideMenu @endif">
+                            <ul class="sub-menu">
+                                <li class="sub-menu-item">
+                                    <a class="sidebar-menu-link {{ request()->routeIs('user.google-business.index') ? 'active' : '' }}" href="{{ route('user.google-business.index') }}">
+                                        <span><i class="bi bi-building-check"></i></span><p>{{ translate('My Locations') }}</p>
                                     </a>
                                 </li>
                             </ul>

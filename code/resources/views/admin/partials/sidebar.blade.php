@@ -799,6 +799,14 @@
                                 </p>
                             </a>
                         </li>
+                        <li class="sub-menu-item">
+                            <a class='sidebar-menu-link {{ sidebar_awake('admin.setting.google.business') }}' href='{{ route('admin.setting.google.business') }}'>
+                                <span><i class="bi bi-building" style="color:#4285f4;font-size:12px;"></i></span>
+                                <p>
+                                    {{ translate('Google Business') }}
+                                </p>
+                            </a>
+                        </li>
                         @endif
                     </ul>
                 </div>

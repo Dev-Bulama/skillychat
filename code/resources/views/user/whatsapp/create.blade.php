@@ -24,13 +24,12 @@
                 {{-- Simplified mode: admin already configured API --}}
                 <div class="alert mb-4" style="background:#f0fdf4;border-left:4px solid #25d366;padding:14px 16px;border-radius:8px;">
                     <p class="fw-semibold mb-1 fs-14"><i class="bi bi-check-circle me-1" style="color:#16a34a;"></i>{{ translate('Platform WhatsApp API is Ready') }}</p>
-                    <p class="fs-13 text-muted mb-0">{{ translate('Our platform is connected to WhatsApp Business API. Just enter your WhatsApp Business phone number and click Connect — no Meta app setup needed!') }}</p>
+                    <p class="fs-13 text-muted mb-0">{{ translate('Our platform is connected to WhatsApp Business API. Enter your WhatsApp Business phone number and Phone Number ID, then click Connect.') }}</p>
                 </div>
 
                 <form action="{{ route('user.whatsapp.store') }}" method="post">
                     @csrf
-                    {{-- Hidden: use admin defaults --}}
-                    <input type="hidden" name="phone_number_id"  value="{{ old('phone_number_id', $adminPhoneId) }}">
+                    {{-- Hidden: use admin defaults for credentials --}}
                     <input type="hidden" name="waba_id"          value="{{ old('waba_id', $adminWabaId) }}">
                     <input type="hidden" name="access_token"     value="{{ old('access_token', $adminToken) }}">
                     <input type="hidden" name="app_id"           value="{{ old('app_id', $adminAppId) }}">
@@ -48,6 +47,16 @@
                                 value="{{ old('phone_number') }}" placeholder="+2348012345678">
                             <small class="text-muted fs-12">{{ translate('Your registered WhatsApp Business number with country code') }}</small>
                             @error('phone_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">{{ translate('Phone Number ID') }} <span class="text-danger">*</span></label>
+                            <input type="text" name="phone_number_id" class="form-control @error('phone_number_id') is-invalid @enderror"
+                                value="{{ old('phone_number_id') }}" placeholder="e.g. 123456789012345">
+                            <small class="text-muted fs-12">
+                                {{ translate('Found in Meta → WhatsApp → Getting Started, next to your phone number. This is YOUR number\'s unique ID, not the App ID.') }}
+                                <a href="{{ route('user.whatsapp.documentation') }}" target="_blank" class="text-primary">{{ translate('Where to find it →') }}</a>
+                            </small>
+                            @error('phone_number_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold">{{ translate('Welcome Message') }}</label>
@@ -84,10 +93,6 @@
                         <div class="col-12 collapse" id="advancedFields">
                             <div class="row g-3 p-3 rounded-3" style="background:#fafafa;border:1px solid #e5e7eb;">
                                 <p class="fs-13 text-muted mb-0">{{ translate('Override the platform defaults with your own Meta App credentials.') }}</p>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold fs-13">{{ translate('Phone Number ID') }}</label>
-                                    <input type="text" name="phone_number_id" class="form-control form-control-sm" value="{{ old('phone_number_id', $adminPhoneId) }}">
-                                </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold fs-13">{{ translate('WABA ID') }}</label>
                                     <input type="text" name="waba_id" class="form-control form-control-sm" value="{{ old('waba_id', $adminWabaId) }}">

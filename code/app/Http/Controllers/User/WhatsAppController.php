@@ -69,8 +69,8 @@ class WhatsAppController extends Controller
     {
         $validated = $request->validate([
             'name'             => 'required|string|max:255',
-            'phone_number'     => 'nullable|string|max:50',
-            'phone_number_id'  => 'nullable|string|max:255',
+            'phone_number'     => 'required|string|max:50',
+            'phone_number_id'  => 'required|string|max:255',
             'waba_id'          => 'nullable|string|max:255',
             'access_token'     => 'nullable|string',
             'app_id'           => 'nullable|string|max:255',
@@ -130,8 +130,8 @@ class WhatsAppController extends Controller
 
         $validated = $request->validate([
             'name'             => 'required|string|max:255',
-            'phone_number'     => 'nullable|string|max:50',
-            'phone_number_id'  => 'nullable|string|max:255',
+            'phone_number'     => 'required|string|max:50',
+            'phone_number_id'  => 'required|string|max:255',
             'waba_id'          => 'nullable|string|max:255',
             'access_token'     => 'nullable|string',
             'app_id'           => 'nullable|string|max:255',
@@ -255,16 +255,17 @@ class WhatsAppController extends Controller
         try {
             $result = (new WhatsAppService($account))->sendText($validated['to'], $validated['message']);
 
-            if (!empty($result['status'])) {
-                WhatsAppMessage::create([
-                    'account_id'   => $account->id,
-                    'from_number'  => $account->phone_number,
-                    'to_number'    => $validated['to'],
-                    'message'      => $validated['message'],
-                    'direction'    => 'outbound',
-                    'status'       => 'sent',
-                ]);
-            }
+            WhatsAppMessage::create([
+                'account_id'    => $account->id,
+                'user_id'       => $this->user->id,
+                'wa_message_id' => $result['data']['messages'][0]['id'] ?? null,
+                'from_number'   => $account->phone_number,
+                'to_number'     => $validated['to'],
+                'direction'     => 'outbound',
+                'type'          => 'text',
+                'content'       => $validated['message'],
+                'status'        => $result['success'] ? 'sent' : 'failed',
+            ]);
 
             return response()->json($result);
         } catch (\Exception $e) {
