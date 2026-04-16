@@ -33,10 +33,31 @@
                             <small class="text-muted fs-12">{{translate('From Meta Developer Console → Your App → App ID')}}</small>
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{translate('Meta App Secret')}}</label>
+                            <div class="input-group">
+                                <input type="password" name="whatsapp_app_secret" class="form-control font-monospace" id="appSecretInput"
+                                    value="{{site_settings('whatsapp_app_secret')}}" placeholder="App Secret from Meta">
+                                <button type="button" class="btn btn-outline-secondary"
+                                    onclick="var f=document.getElementById('appSecretInput');f.type=f.type==='password'?'text':'password';">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted fs-12">{{translate('Meta App → Settings → Basic → App Secret. Required for Embedded Signup.')}}</small>
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label fw-semibold">{{translate('WhatsApp Business Account ID (WABA ID)')}}</label>
                             <input type="text" name="whatsapp_default_waba_id" class="form-control"
                                 value="{{site_settings('whatsapp_default_waba_id')}}" placeholder="e.g. 987654321098765">
                             <small class="text-muted fs-12">{{translate('From WhatsApp → Getting Started → WABA ID')}}</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{translate('Embedded Signup Config ID')}}</label>
+                            <input type="text" name="whatsapp_embedded_config_id" class="form-control"
+                                value="{{site_settings('whatsapp_embedded_config_id')}}" placeholder="e.g. 1234567890123456">
+                            <small class="text-muted fs-12">
+                                {{translate('Meta App → WhatsApp → Embedded Signup → Create Configuration → copy the Config ID.')}}
+                                <span class="text-danger fw-semibold">{{translate('Required for one-click user signup.')}}</span>
+                            </small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">{{translate('Phone Number ID')}}</label>
@@ -218,17 +239,43 @@
                     </div>
                 </div>
 
-                {{-- Step 6 --}}
+                {{-- Step 6: Embedded Signup --}}
+                <div class="d-flex gap-3 mb-4 pb-4 border-bottom">
+                    <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center fw-bold text-white fs-16"
+                        style="width:42px;height:42px;min-width:42px;background:#6366f1;">6</div>
+                    <div class="w-100">
+                        <h6 class="fw-bold mb-2">{{translate('Enable Embedded Signup (Users Self-Onboard — No Admin Involvement)')}}</h6>
+                        <div class="alert fs-13 mb-3" style="background:#eff6ff;border-left:3px solid #3b82f6;padding:10px 14px;border-radius:6px;">
+                            <i class="bi bi-lightning-charge-fill me-1 text-primary"></i>
+                            <strong>{{translate('This is what makes it scale to millions.')}}</strong>
+                            {{translate('Without this, you must manually add every user\'s phone number in Meta. With Embedded Signup, each user connects their own WhatsApp Business account in 2 minutes — completely automated.')}}
+                        </div>
+                        <ol class="fs-13 text-muted ps-3 mb-0">
+                            <li class="mb-2">In your Meta App, go to <strong>WhatsApp → Embedded Signup</strong> in the left sidebar.</li>
+                            <li class="mb-2">Click <strong>"Create Configuration"</strong> → give it a name (e.g. "SkiillyChat Signup").</li>
+                            <li class="mb-2">Under <strong>Permissions</strong>, make sure these are enabled:
+                                <ul class="mt-1"><li><code>whatsapp_business_messaging</code></li><li><code>whatsapp_business_management</code></li></ul>
+                            </li>
+                            <li class="mb-2">Click <strong>Save</strong> → copy the <strong>Configuration ID</strong> that appears.</li>
+                            <li class="mb-2">Paste it into the <strong>"Embedded Signup Config ID"</strong> field above → save settings.</li>
+                            <li class="mb-2">Also go to <strong>App → Settings → Basic</strong> → copy the <strong>App Secret</strong> → paste into <strong>"Meta App Secret"</strong> above → save.</li>
+                            <li class="mb-2">Submit your Meta App for <strong>App Review</strong> with these permissions: <code>whatsapp_business_messaging</code> and <code>whatsapp_business_management</code>. During review (~3–7 days), Embedded Signup only works for test users you add in the OAuth consent screen.</li>
+                            <li>Once approved — users can self-onboard. No admin action required per user ever again.</li>
+                        </ol>
+                    </div>
+                </div>
+
+                {{-- Step 7 --}}
                 <div class="d-flex gap-3 mb-4">
                     <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center fw-bold text-white fs-16"
-                        style="width:42px;height:42px;min-width:42px;background:#25d366;">6</div>
+                        style="width:42px;height:42px;min-width:42px;background:#25d366;">7</div>
                     <div class="w-100">
                         <h6 class="fw-bold mb-2">{{translate('Users Connect Their Phone Number (That\'s All They Do!)')}}</h6>
                         <ol class="fs-13 text-muted ps-3 mb-0">
-                            <li class="mb-2">Tell your users to go to <strong>WhatsApp → Connect Account</strong> in their dashboard.</li>
-                            <li class="mb-2">They enter an <strong>Account Label</strong> and their <strong>WhatsApp Business Phone Number</strong> in international format (e.g. +2348012345678), plus the <strong>Phone Number ID</strong> from Meta → Getting Started.</li>
-                            <li class="mb-2">They click <strong>Connect WhatsApp</strong> and test the connection.</li>
-                            <li>Messages sent to their number will immediately be received and handled by their AI chatbot or live agent — <strong>no webhook setup required on their end</strong>.</li>
+                            <li class="mb-2">Users go to <strong>WhatsApp → Connect Account</strong> in their dashboard.</li>
+                            <li class="mb-2">They click <strong>"Connect with Facebook"</strong> — a Meta popup opens.</li>
+                            <li class="mb-2">They log into their Facebook account, select their WhatsApp Business number, grant permission.</li>
+                            <li>Done — their number is connected, messages start flowing. Zero admin effort.</li>
                         </ol>
                         <div class="alert mt-3 fs-13" style="background:#fff8e1;border-left:3px solid #ffc107;padding:10px 14px;border-radius:6px;">
                             <i class="bi bi-exclamation-triangle me-1 text-warning"></i>
