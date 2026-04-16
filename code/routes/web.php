@@ -443,13 +443,15 @@ use Illuminate\Support\Facades\Http;
              Route::get('/',                          'index')->name('index');
              Route::get('/create',                    'create')->name('create');
              Route::post('/store',                    'store')->name('store');
+             Route::post('/embedded-signup',          'embeddedSignup')->name('embedded-signup');
+             Route::post('/embedded-complete',        'embeddedComplete')->name('embedded-complete');
+             Route::get('/documentation',             'documentation')->name('documentation');
              Route::get('/{uid}/edit',                'edit')->name('edit');
              Route::put('/{uid}/update',              'update')->name('update');
              Route::delete('/{uid}/destroy',          'destroy')->name('destroy');
              Route::get('/{uid}/messages',            'messages')->name('messages');
              Route::post('/{uid}/send',               'sendMessage')->name('send');
              Route::get('/{uid}/test',                'test')->name('test');
-             Route::get('/documentation',             'documentation')->name('documentation');
          });
 
          # ── CRM ───────────────────────────────────────────────────────────────────

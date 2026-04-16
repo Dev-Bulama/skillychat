@@ -277,6 +277,141 @@ class WhatsAppController extends Controller
     }
 
     /**
+     * Step 1 of Embedded Signup: exchange Meta code for token, return phone list.
+     */
+    public function embeddedSignup(Request $request): JsonResponse
+    {
+        $request->validate(['code' => 'required|string']);
+
+        $appId     = site_settings('whatsapp_default_app_id');
+        $appSecret = site_settings('whatsapp_app_secret');
+
+        if (!$appId || !$appSecret) {
+            return response()->json(['success' => false, 'error' => 'Admin has not configured App Secret yet. Please contact support.']);
+        }
+
+        // Exchange code → short-lived token
+        $tokenRes = \Illuminate\Support\Facades\Http::get('https://graph.facebook.com/oauth/access_token', [
+            'client_id'     => $appId,
+            'client_secret' => $appSecret,
+            'code'          => $request->code,
+        ]);
+
+        if ($tokenRes->failed()) {
+            return response()->json(['success' => false, 'error' => 'Token exchange failed: ' . $tokenRes->json('error.message', $tokenRes->body())]);
+        }
+
+        $token = $tokenRes->json('access_token');
+
+        // Extend to long-lived user token (60 days)
+        $longRes = \Illuminate\Support\Facades\Http::get('https://graph.facebook.com/oauth/access_token', [
+            'grant_type'        => 'fb_exchange_token',
+            'client_id'         => $appId,
+            'client_secret'     => $appSecret,
+            'fb_exchange_token' => $token,
+        ]);
+        if ($longRes->successful() && $longRes->json('access_token')) {
+            $token = $longRes->json('access_token');
+        }
+
+        // Fetch all WABAs accessible to this user
+        $wabaRes = \Illuminate\Support\Facades\Http::withToken($token)
+            ->get('https://graph.facebook.com/v19.0/me/whatsapp_business_accounts');
+
+        if ($wabaRes->failed() || empty($wabaRes->json('data'))) {
+            return response()->json(['success' => false, 'error' => 'No WhatsApp Business Account found on this Facebook account.']);
+        }
+
+        $phones = [];
+        foreach ($wabaRes->json('data') as $waba) {
+            $wabaId   = $waba['id'];
+            $wabaName = $waba['name'] ?? 'Business Account';
+
+            // Get phone numbers for this WABA
+            $phoneRes = \Illuminate\Support\Facades\Http::withToken($token)
+                ->get("https://graph.facebook.com/v19.0/{$wabaId}/phone_numbers", [
+                    'fields' => 'id,display_phone_number,verified_name,quality_rating,status',
+                ]);
+
+            foreach ($phoneRes->json('data', []) as $p) {
+                $phones[] = [
+                    'phone_number_id' => $p['id'],
+                    'phone_number'    => $p['display_phone_number'],
+                    'verified_name'   => $p['verified_name'] ?? '',
+                    'quality'         => $p['quality_rating'] ?? 'UNKNOWN',
+                    'waba_id'         => $wabaId,
+                    'waba_name'       => $wabaName,
+                ];
+            }
+
+            // Subscribe platform webhook to this WABA
+            \Illuminate\Support\Facades\Http::withToken($token)
+                ->post("https://graph.facebook.com/v19.0/{$wabaId}/subscribed_apps");
+        }
+
+        if (empty($phones)) {
+            return response()->json(['success' => false, 'error' => 'No verified phone numbers found in your WhatsApp Business Account.']);
+        }
+
+        // Stash token in session for step 2
+        session(['wa_embedded_token' => $token]);
+
+        return response()->json(['success' => true, 'phones' => $phones]);
+    }
+
+    /**
+     * Step 2 of Embedded Signup: user selected a phone — create the account.
+     */
+    public function embeddedComplete(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name'             => 'required|string|max:255',
+            'phone_number_id'  => 'required|string',
+            'phone_number'     => 'required|string',
+            'waba_id'          => 'required|string',
+            'welcome_message'  => 'nullable|string',
+            'fallback_message' => 'nullable|string',
+            'ai_enabled'       => 'boolean',
+            'chatbot_id'       => 'nullable|exists:chatbots,id',
+        ]);
+
+        $token = session('wa_embedded_token');
+        if (!$token) {
+            return response()->json(['success' => false, 'error' => 'Session expired. Please start again.']);
+        }
+
+        // Upsert — reconnect if same phone_number_id already exists for this user
+        $account = WhatsAppAccount::where('user_id', $this->user->id)
+            ->where('phone_number_id', $validated['phone_number_id'])
+            ->first();
+
+        $data = [
+            'user_id'          => $this->user->id,
+            'name'             => $validated['name'],
+            'phone_number'     => $validated['phone_number'],
+            'phone_number_id'  => $validated['phone_number_id'],
+            'waba_id'          => $validated['waba_id'],
+            'access_token'     => $token,
+            'verify_token'     => $account?->verify_token ?? Str::random(32),
+            'welcome_message'  => $validated['welcome_message'] ?? site_settings('whatsapp_default_welcome_message', ''),
+            'fallback_message' => $validated['fallback_message'] ?? site_settings('whatsapp_default_fallback_message', ''),
+            'ai_enabled'       => $validated['ai_enabled'] ?? false,
+            'chatbot_id'       => $validated['chatbot_id'] ?? null,
+            'status'           => 1,
+        ];
+
+        if ($account) {
+            $account->update($data);
+        } else {
+            WhatsAppAccount::create($data);
+        }
+
+        session()->forget('wa_embedded_token');
+
+        return response()->json(['success' => true, 'redirect' => route('user.whatsapp.index')]);
+    }
+
+    /**
      * Show the setup / documentation guide.
      *
      * @return View
