@@ -28,25 +28,20 @@ class MailConfigServiceProvider extends ServiceProvider
     {
         try {
             $mail = MailGateway::where('code', '101SMTP')->first();
-            if($mail){
-                $config = array(
-                    'driver'     => @$mail->credential->driver,
-                    'host'       => @$mail->credential->host,
-                    'port'       => @$mail->credential->port,
-                    'from'       => [
-                        'address'=> @$mail->credential->from->address,
-                        'name'   => @$mail->credential->from->name
-                    ],
-                    'encryption' => @$mail->credential->encryption=="PWMTA"?null:$mail->credential->encryption,
-                    'username'   => @$mail->credential->username,
-                    'password'   => @$mail->credential->password,
-                    'sendmail'   => '/usr/sbin/sendmail -bs',
-                    'pretend'    => false,
-                );
-                Config::set('mail', $config);
+            if ($mail) {
+                $encryption = @$mail->credential->encryption === 'PWMTA' ? null : @$mail->credential->encryption;
 
+                Config::set('mail.default', 'smtp');
+                Config::set('mail.mailers.smtp.transport', 'smtp');
+                Config::set('mail.mailers.smtp.host',       @$mail->credential->host);
+                Config::set('mail.mailers.smtp.port',       @$mail->credential->port);
+                Config::set('mail.mailers.smtp.encryption', $encryption);
+                Config::set('mail.mailers.smtp.username',   @$mail->credential->username);
+                Config::set('mail.mailers.smtp.password',   @$mail->credential->password);
+                Config::set('mail.from.address',            @$mail->credential->from->address);
+                Config::set('mail.from.name',               @$mail->credential->from->name);
             }
-        }catch (\Exception $ex) {
+        } catch (\Exception $ex) {
 
         }
     }

@@ -37,16 +37,14 @@ class DomainVerificationMiddleware
                 ];
 
                 $url = 'https://verifylicense.online/api/licence-verification/check-domain';
-                $response = Http::timeout(120)->post($url, $params);
-
-                Setting::updateOrInsert(
-                    ['key' => 'next_verification'],
-                    ['value' => $current_time->addDays(3)]
-                );
-
+                $response = Http::timeout(30)->post($url, $params);
 
                 if ($response->successful() && ($apiResponse = $response->json()) && ($apiResponse['success'] ?? false) && ($apiResponse['code'] ?? null) === 200) {
 
+                    Setting::updateOrInsert(
+                        ['key' => 'next_verification'],
+                        ['value' => $current_time->copy()->addDays(3)]
+                    );
 
                     Setting::updateOrInsert(
                         ['key' => 'is_domain_verified'],
@@ -62,14 +60,31 @@ class DomainVerificationMiddleware
                     return $next($request);
                 }
 
-                Setting::updateOrInsert(['key' => 'is_domain_verified'], ['value' => StatusEnum::false->status()]);
+                $apiResponse = $response->json() ?? [];
 
-                return redirect()->route('domain.unverified')->with('error', $data['data']['error'] ?? 'Invalid Domain');
+                // Schedule a short retry (6 hours) so the user is not locked out for days
+                Setting::updateOrInsert(
+                    ['key' => 'next_verification'],
+                    ['value' => $current_time->copy()->addHours(6)]
+                );
+
+                Setting::updateOrInsert(['key' => 'is_domain_verified'], ['value' => StatusEnum::false->status()]);
+                optimize_clear();
+
+                return redirect()->route('domain.unverified')->with('error', $apiResponse['data']['error'] ?? $apiResponse['message'] ?? 'Invalid Domain or Purchase Key');
 
             } catch (\Exception $ex) {
+                // Network/timeout errors: preserve existing verification status, retry in 1 hour
+                Setting::updateOrInsert(
+                    ['key' => 'next_verification'],
+                    ['value' => $current_time->addHours(1)]
+                );
 
-                Setting::updateOrInsert(['key' => 'is_domain_verified'], ['value' => StatusEnum::false->status()]);
-                return redirect()->route('domain.unverified')->with('error', 'Domain verification failed.');
+                if (site_settings('is_domain_verified') == StatusEnum::true->status()) {
+                    return $next($request);
+                }
+
+                return redirect()->route('domain.unverified')->with('error', 'Domain verification service temporarily unavailable.');
             }
         }
 
